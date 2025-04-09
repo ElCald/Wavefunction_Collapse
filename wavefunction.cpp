@@ -16,15 +16,18 @@
  #include <array>
  #include <vector>
  #include <stack>
+ #include <set>
+ #include <map>
+ #include <random>
+ #include <climits> 
  
  #include <omp.h>
 
+ #include "wavefunction.h"
 
-using namespace std;
 
-#define TILE_SIZE 2 // Taille des tuiles
-#define SAMPLE_SIZE 6 // Taille de la grille
-#define PROBLEM_SIZE 16 // Taille de la grille
+ using namespace std;
+
 
 
 /**
@@ -35,17 +38,19 @@ using namespace std;
 
 
 /**
+ * Permet de savoir si une tuile se trouve dans notre liste
+ * 
  * @param tiles Liste de tuiles
  * @param t Tuile a tester
  * 
  * @return L'indice de la position de la tuile dans la liste sinon -1
  */
-int tile_is_in_list(vector<array<array<int, TILE_SIZE>, TILE_SIZE>>& tiles, array<array<int, TILE_SIZE>, TILE_SIZE>& t){
+int tile_is_in_list(vector<Tile>& tiles, Tile& t){
 
     bool res = false;
     int i=0;
 
-    for(array<array<int, TILE_SIZE>, TILE_SIZE>& tile : tiles) {
+    for(Tile tile : tiles) {
 
         if(tile == t) {
             res = true;
@@ -62,27 +67,28 @@ int tile_is_in_list(vector<array<array<int, TILE_SIZE>, TILE_SIZE>>& tiles, arra
 
 
 /**
+ * Extraction des tuiles qui se trouvent dans le sample initiale en input
+ * 
  * @param tiles Liste qui contiendra les tuiles de la grille
  * @param grid_sample Grille de 
  */
-void save_tiles_from_grid_sample(vector<array<array<int, TILE_SIZE>, TILE_SIZE>>& tiles, vector<int>& num_tile, array<array<int, SAMPLE_SIZE>, SAMPLE_SIZE>& grid_sample) {
+void save_tiles_from_grid_sample(vector<Tile>& tiles, vector<int>& num_tile, vector2D& grid_sample) {
     int indice_tile;
 
     // Parcours de la grille
-    for(int i=0; i<SAMPLE_SIZE-TILE_SIZE+1; i++) {
-        for(int j=0; j<SAMPLE_SIZE-TILE_SIZE+1; j++) {
+    for(size_t i=0; i<grid_sample.size()-TILE_SIZE+1; i++) {
+        for(size_t j=0; j<grid_sample.at(i).size()-TILE_SIZE+1; j++) {
 
-            array<array<int, TILE_SIZE>, TILE_SIZE> tile;
-            for(array<int, TILE_SIZE>& t : tile){
-                t.fill(0);
-            }
+            Tile tile(TILE_SIZE, vector<int>(TILE_SIZE));
 
             for(int k=0; k<TILE_SIZE; k++) {
                 for(int l=0; l<TILE_SIZE; l++) {
-                    tile.at(k).at(l) = grid_sample.at(i+k).at(j+l);
+                    tile[k][l] = grid_sample.at(i+k).at(j+l);
                 }
             }
 
+
+            // On vérifie si la tuile existe déjà, ce qui nous permet de compter le nombre qu'on en trouve dans le sample
             if((indice_tile = tile_is_in_list(tiles, tile)) == -1){
                 tiles.push_back(tile);
                 num_tile.push_back(1);
@@ -100,87 +106,174 @@ void save_tiles_from_grid_sample(vector<array<array<int, TILE_SIZE>, TILE_SIZE>>
 
 
 /**
- * Trouve les tuiles overlape d'une tuile dans la grille selon un offset (x,y).
+ * Trouve si deux tuiles peuvent se chevaucher
  * 
- * @param over_tiles Liste des tuiles cherchée. Ne pas oublier de reset() avant remplissage
- * @param main_tile Tuile à chercher
- * @param x offset
- * @param y offset
- * @param grid_sample Grille
+ * @param a Tuile a
+ * @param b Tuile b
+ * @param x offset (positif = droite, négatif = gauche ou 0)
+ * @param y offset (positif = bas, négatif = haut ou 0)
  * 
- * @return True si au moins une tuile est trouvée
+ * @return True si le chevauchement est possible
  */
-bool find_overlapping_tiles(vector<array<array<int, TILE_SIZE>, TILE_SIZE>>& over_tiles, array<array<int, TILE_SIZE>, TILE_SIZE>& main_tile, int x, int y, array<array<int, SAMPLE_SIZE>, SAMPLE_SIZE>& grid_sample){
-    
+bool tiles_can_overlap(const Tile &a, const Tile &b, int x, int y) {
 
-    for(int i=0; i<SAMPLE_SIZE-TILE_SIZE+1; i++) {
-        for(int j=0; j<SAMPLE_SIZE-TILE_SIZE+1; j++) {
+    for (int i = 0; i < TILE_SIZE; ++i) {
+        for (int j = 0; j < TILE_SIZE; ++j) {
 
-            array<array<int, TILE_SIZE>, TILE_SIZE> tile;
-            for(array<int, TILE_SIZE>& t : tile){
-                t.fill(0);
-            }
+            int ax = i, ay = j; // Bord de la tuile "a"
+            int bx = i - x, by = j - y; // Bord de la tuile "b"
 
-            for(int k=0; k<TILE_SIZE; k++) {
-                for(int l=0; l<TILE_SIZE; l++) {
-                    tile.at(k).at(l) = grid_sample.at(i+k).at(j+l);
-                }
-            }
+            if (bx >= 0 && by >= 0 && bx < TILE_SIZE && by < TILE_SIZE){
 
-            // Lorsqu'on trouve la tuile cherchée dans la grille
-            if(main_tile == tile){
-
-                // Sécurité pour ne pas sortir de la grille
-                if(i+x >= 0 && j+y >= 0 && i+x < SAMPLE_SIZE && j+y < SAMPLE_SIZE){ 
-
-                    array<array<int, TILE_SIZE>, TILE_SIZE> temp_tile;
-
-                    for(int k=i+x; k<i+x+TILE_SIZE; k++) {
-                        for(int l=j+y; l<j+y+TILE_SIZE; l++) {
-                            temp_tile.at(k-i-x).at(l-j-y) = grid_sample.at(k).at(l);
-                        }
-                    }
-
-                    if(tile_is_in_list(over_tiles, temp_tile) == -1){
-                        over_tiles.push_back(temp_tile);
-                    }
-                    
-
+                if (a[ay][ax] != b[by][bx]){ // On compare si les deux bords adjacents des tuiles sont égales
+                    return false;
                 }
 
             }
-
+                
         }
     }
 
-    return !over_tiles.empty();
+    return true;
 }
 
 
 /**
- * Calcul l'entropie de la grille contenant le problème
+ * Génère les voisins compatibles pour chaque tuile
  * 
- * @param grid_problem
+ * @param tiles Liste de tuiles
  * 
- */
-void entropy_problem(array<array<int, PROBLEM_SIZE>, PROBLEM_SIZE>& grid_problem){
+ * @return Dictionnaire des tuiles adjacentes pour toutes les tuiles
+*/ 
+dicoADJtiles compute_adjacency(const vector<Tile> &tiles) {
 
-    array<array<vector<int>, PROBLEM_SIZE>, PROBLEM_SIZE> grid_entropy;
+    dicoADJtiles dico;
 
-    stack<array<array<int, TILE_SIZE>, TILE_SIZE>> stack_tile; // pile qui contient les tuiles qui contiennent le pixel (i,j)
-    
+    for (size_t i = 0; i < tiles.size(); ++i) {
+        for (size_t j = 0; j < tiles.size(); ++j) {
 
-    for(int i=0; i<PROBLEM_SIZE; i++) {
-        for(int j=0; j<PROBLEM_SIZE; j++) {
-            
+            for (int x = -1; x <= 1; ++x) {
+                for (int y = -1; y <= 1; ++y) {
 
+                    if (abs(x) + abs(y) != 1) continue;
 
+                    // Si la tuile peut être chevauchée alors on save celle qui peut
+                    if (tiles_can_overlap(tiles[i], tiles[j], x, y)) {
+                        dico[i][{x, y}].insert(j); // Insertion à la tuile i et à l'offset (dx,dy) l'indice de la tuile adjacente j
+                    }
 
+                }
+            }
 
         }
     }
 
+    return dico;
 }
+
+
+
+/**
+ * Sélectionne la case de plus faible entropie
+ * 
+ * @param grille
+ * 
+ * @return Les coordonnées dans la grille de la case avec la plus faible entropie, si la plus petite entropie c'est 1, alors les coordonnées retournées sont (-1,-1)
+ */
+pair<int, int> find_lowest_entropy(const Wave_grid &grille) {
+
+    int minChoices = INT_MAX;
+
+    pair<int, int> result = {-1, -1};
+
+    for (size_t i = 0; i < grille.size(); i++) {
+        for (size_t j = 0; j < grille[i].size(); j++) {
+
+            int options = grille[i][j].size();
+
+            if (options > 1 && options < minChoices) {
+                minChoices = options;
+                result = {i, j};
+            }
+        }
+    }
+    return result;
+}
+
+
+/**
+ * Calcul de l'entropie de toutes les cases de la grilles
+ * 
+ * @param grille
+ * @param dicoADJ Dictionnaire des tuiles adjacentes
+ */
+void entropy(Wave_grid &grille, dicoADJtiles& dicoADJ){
+
+    bool miseAjour;
+
+
+    do{
+        miseAjour = false; 
+
+        // Parcours de la grille
+        for(size_t i=0; i<grille.size(); i++){
+            for(size_t j=0; j<grille[i].size(); j++){
+
+                if (grille[i][j].size() == 1) {
+                    // Dans le cas où la case de la grille possède déjà 1 seule tuile on n'a pas besoin de l'a traiter donc on skip la prochaine boucle for
+                }
+                else{
+                    // Parcours des tuiles possible pour une case (i,j) de la grille
+                    for(int k : grille[i][j]){
+
+                        bool estCompatible = true; // variable qui dit si la tuile k est compatible avec ses voisines dans la grille
+
+                        // Pour une tuile k dans la case (i,j) on récupère tous ses voisins possibles
+                        for (auto [offset, tiles_adj] : dicoADJ.at(k)) {
+                            
+                            size_t voisin_x = i + offset.first;
+                            size_t voisin_y = j + offset.second;
+
+                            if(voisin_x >= 0 && voisin_x < grille.size() && voisin_y >= 0 && voisin_y < grille[i].size()){ // On vérifie que le voisin n'est pas en dehors de la grille
+                                // On récupère toutes les tuiles qui peuvent se trouver à la case du voisin dans la grille
+
+                                set<int> liste_tile_voisin = grille[voisin_x][voisin_y];
+
+                                bool found = false;
+
+                                // On cherche si on trouve au moins une tuile qui se trouve dans le même espace que la voisine (offset) de la tuile "k"
+                                for (int t : liste_tile_voisin) {
+                                    if (dicoADJ.at(k).at(offset).count(t)) {
+                                        found = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!found) {
+                                    estCompatible = false;
+                                    break;
+                                }
+
+                            }
+
+                            // Si c'est pas possible de placer cette tuile à la case (i,j) alors on l'a retire de la case
+                            if (!estCompatible) {
+                                grille[i][j].erase(k);
+                                miseAjour = true;
+                            }
+
+                        } // for
+                    } // for
+
+                } // if la case ne possède pas juste 1 tuile de possible
+
+            } // for grille j
+        } // for grille i
+
+
+    }while(miseAjour); // Si on met à jour une des cases de la grille, on recommence les calculs
+} 
+
 
 
 
@@ -190,10 +283,10 @@ void entropy_problem(array<array<int, PROBLEM_SIZE>, PROBLEM_SIZE>& grid_problem
  * 
  * @param tiles
  */
-void print_tiles_list(vector<array<array<int, TILE_SIZE>, TILE_SIZE>>& tiles){
+void print_tiles_list(vector<Tile>& tiles){
     int k=0;
 
-    for(array<array<int, TILE_SIZE>, TILE_SIZE>& tile : tiles) {
+    for(Tile& tile : tiles) {
 
         cout << "Tile: " << k << endl;
 
@@ -216,10 +309,10 @@ void print_tiles_list(vector<array<array<int, TILE_SIZE>, TILE_SIZE>>& tiles){
  * @param tiles
  * @param num_tile
  */
-void print_tiles_list(vector<array<array<int, TILE_SIZE>, TILE_SIZE>>& tiles, vector<int>& num_tile){
+void print_tiles_list(vector<Tile>& tiles, vector<int>& num_tile){
     int k=0;
 
-    for(array<array<int, TILE_SIZE>, TILE_SIZE>& tile : tiles) {
+    for(Tile& tile : tiles) {
 
         cout << "Tile: " << k << " > " << num_tile.at(k) << endl;
 
@@ -238,59 +331,3 @@ void print_tiles_list(vector<array<array<int, TILE_SIZE>, TILE_SIZE>>& tiles, ve
 
 
 
-int main(int argc, char* argv[]){
-
-    // Liste des tuiles de la grille
-    vector<array<array<int, TILE_SIZE>, TILE_SIZE>> list_tile; // Liste de tuiles
-    vector<int> num_tile; // Nombre de tuile à l'indice de celle-ci dans la liste
-
-    vector<array<array<int, TILE_SIZE>, TILE_SIZE>> overlap_tile;
-
-    // Grille sample
-    array<array<int, SAMPLE_SIZE>, SAMPLE_SIZE> grid_sample {{
-        {0, 1, 0, 0, 0, 0},
-        {0, 1, 1, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 1, 0, 0},
-        {0, 0, 0, 1, 0, 0},
-        {0, 0, 0, 0, 0, 0}
-    }};
-
-
-    // Grille problem
-    array<array<int, PROBLEM_SIZE>, PROBLEM_SIZE> grid_problem {{
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-    }};
-
-
-    save_tiles_from_grid_sample(list_tile, num_tile, grid_sample);
-
-    print_tiles_list(list_tile, num_tile);
-
-    overlap_tile.clear();
-
-    if(find_overlapping_tiles(overlap_tile, list_tile.at(0), 1, 1, grid_sample)){
-        print_tiles_list(overlap_tile);
-    }
-        
-
-    
-
-
-    return EXIT_SUCCESS;
-}

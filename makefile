@@ -3,8 +3,8 @@
 # Author makefile : Cyril Rabat
 #
 
-EXEC = wavefunction
-OBJECTS = 
+EXEC = main
+OBJECTS = wavefunction.o
 PROJECT_NAME = 
 
 #
