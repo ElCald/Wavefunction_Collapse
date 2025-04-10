@@ -22,8 +22,8 @@ using namespace std;
 
 
 #define TILE_SIZE 2 // Taille des tuiles
-#define GRILLE_SIZE_WIDTH 10
-#define GRILLE_SIZE_HEIGHT 10
+#define GRILLE_SIZE_WIDTH 20
+#define GRILLE_SIZE_HEIGHT 20
 
 
 
@@ -49,6 +49,8 @@ void entropy(Wave_grid &grille, dicoADJtiles& dicoADJ);
 pair<int, int> find_lowest_entropy(const Wave_grid &grille);
 void print_tiles_list(vector<Tile>& tiles);
 void print_tiles_list(vector<Tile>& tiles, vector<int>& num_tile);
+Tile rotateTile(const Tile& matrix);
+void print_tile(Tile tile);
 
 
 

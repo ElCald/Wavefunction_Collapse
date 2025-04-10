@@ -117,22 +117,22 @@ void save_tiles_from_grid_sample(vector<Tile>& tiles, vector<int>& num_tile, vec
  */
 bool tiles_can_overlap(const Tile &a, const Tile &b, int x, int y) {
 
-    for (int i = 0; i < TILE_SIZE; ++i) {
-        for (int j = 0; j < TILE_SIZE; ++j) {
+    // for (int i = 0; i < TILE_SIZE; ++i) {
+    //     for (int j = 0; j < TILE_SIZE; ++j) {
 
-            int ax = i, ay = j; // Bord de la tuile "a"
-            int bx = i - x, by = j - y; // Bord de la tuile "b"
+    //         int ax = i, ay = j; // Bord de la tuile "a"
+    //         int bx = i - x, by = j - y; // Bord de la tuile "b"
 
-            if (bx >= 0 && by >= 0 && bx < TILE_SIZE && by < TILE_SIZE){
+    //         if (bx >= 0 && by >= 0 && bx < TILE_SIZE && by < TILE_SIZE){
 
-                if (a[ay][ax] != b[by][bx]){ // On compare si les deux bords adjacents des tuiles sont égales
-                    return false;
-                }
+    //             if (a[ay][ax] != b[by][bx]){ // On compare si les deux bords adjacents des tuiles sont égales
+    //                 return false;
+    //             }
 
-            }
+    //         }
                 
-        }
-    }
+    //     }
+    // }
 
     return true;
 }
@@ -155,7 +155,8 @@ dicoADJtiles compute_adjacency(const vector<Tile> &tiles) {
             for (int x = -1; x <= 1; ++x) {
                 for (int y = -1; y <= 1; ++y) {
 
-                    if (abs(x) + abs(y) != 1) continue;
+                    // if (abs(x) + abs(y) != 1) continue;
+                    if (x == 0 && y ==0) continue;
 
                     // Si la tuile peut être chevauchée alors on save celle qui peut
                     if (tiles_can_overlap(tiles[i], tiles[j], x, y)) {
@@ -199,6 +200,9 @@ pair<int, int> find_lowest_entropy(const Wave_grid &grille) {
     }
     return result;
 }
+
+
+
 
 
 /**
@@ -290,12 +294,7 @@ void print_tiles_list(vector<Tile>& tiles){
 
         cout << "Tile: " << k << endl;
 
-        for(int i=0; i<TILE_SIZE; i++) {
-            for(int j=0; j<TILE_SIZE; j++) {
-                cout << tile.at(i).at(j) << " ";
-            }
-            cout << endl;
-        }
+        print_tile(tile);
 
         k++;
 
@@ -316,12 +315,7 @@ void print_tiles_list(vector<Tile>& tiles, vector<int>& num_tile){
 
         cout << "Tile: " << k << " > " << num_tile.at(k) << endl;
 
-        for(int i=0; i<TILE_SIZE; i++) {
-            for(int j=0; j<TILE_SIZE; j++) {
-                cout << tile.at(i).at(j) << " ";
-            }
-            cout << endl;
-        }
+        print_tile(tile);
 
         k++;
 
@@ -330,4 +324,43 @@ void print_tiles_list(vector<Tile>& tiles, vector<int>& num_tile){
 }
 
 
+/**
+ * Affichage d'une tuile
+ * 
+ * @param tile
+ */
+void print_tile(Tile tile){
 
+    for(int i=0; i<TILE_SIZE; i++) {
+        for(int j=0; j<TILE_SIZE; j++) {
+            cout << tile.at(i).at(j) << " ";
+        }
+        cout << endl;
+    }
+    cout << endl;
+}
+
+
+
+/**
+ * Créer une tuile qui a subit une rotation de 180
+ * 
+ * @param matrix Tuile d'origine
+ * 
+ * @return Tuile avec rotation
+ */
+Tile rotateTile(const Tile& matrix) {
+    int rows = matrix.size();
+    if (rows == 0) return {};
+    int cols = matrix[0].size();
+
+    Tile result(rows, vector<int>(cols));
+
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            result[rows - 1 - i][cols - 1 - j] = matrix[i][j];
+        }
+    }
+
+    return result;
+}

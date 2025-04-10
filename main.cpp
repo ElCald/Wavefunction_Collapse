@@ -13,14 +13,25 @@ int main(int argc, char* argv[]){
 
 
     // Grille sample
-    vector2D grid_sample {
-        {0, 1, 0, 0, 0, 0},
-        {0, 1, 1, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 1, 0, 0},
-        {0, 0, 0, 1, 0, 0},
-        {0, 0, 0, 0, 0, 0}
+    vector2D grid_sample2 {
+        {0, 2, 1, 2, 0, 0},
+        {0, 2, 1, 2, 0, 0},
+        {2, 2, 1, 2, 2, 2},
+        {1, 1, 1, 1, 1, 2},
+        {2, 2, 2, 2, 1, 2},
+        {0, 0, 0, 2, 1, 2}
     };
+
+    vector2D grid_sample {
+        {1, 1, 1, 1, 0, 0, 0},
+        {1, 2, 2, 1, 0, 0, 0},
+        {1, 2, 2, 1, 0, 0, 0},
+        {1, 1, 1, 1, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 3, 3, 0},
+        {0, 0, 0, 0, 3, 3, 0},
+    };
+
 
 
     
@@ -31,6 +42,16 @@ int main(int argc, char* argv[]){
     print_tiles_list(list_tile, num_tile);
     
 
+    tiles_can_overlap(list_tile.at(0), list_tile.at(1), 0, 1);
+
+    print_tile(list_tile.at(0));
+
+    print_tile(rotateTile(list_tile.at(0)));
+
+    
+
+
+/*
     // Recherche de toutes les tuiles voisines
     dicoADJ = compute_adjacency(list_tile);
 
@@ -41,10 +62,12 @@ int main(int argc, char* argv[]){
     for (size_t i = 0; i < grille.size(); i++){
         for (size_t j = 0; j < grille[i].size(); j++){
             for (size_t k = 0; k < list_tile.size(); k++){
-                grille[i][j].insert(i);
+                grille[i][j].insert(k);
             }
         }
     }
+
+
         
 
     // Génération de la map
@@ -71,15 +94,16 @@ int main(int argc, char* argv[]){
     
 
     // Affichage de la grille finale (coin haut gauche de chaque tuile)
-    for (size_t i = 0; i < grille.size(); i++) {
+    for (size_t i = 0; i < grille.size()-1; i++) {
         for (size_t j = 0; j < grille[i].size(); j++) {
             int id = *grille[i][j].begin();
+            // cout << id << " ";
             cout << list_tile[id][0][0] << " "; // coin supérieur gauche
         }
         cout << "\n";
     }
 
-
+*/
 
     return EXIT_SUCCESS;
 }
