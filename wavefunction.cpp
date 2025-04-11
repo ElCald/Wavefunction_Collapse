@@ -20,6 +20,7 @@
  #include <map>
  #include <random>
  #include <climits> 
+#include <opencv2/opencv.hpp>
  
  #include <omp.h>
 
@@ -105,38 +106,6 @@ void save_tiles_from_grid_sample(vector<Tile>& tiles, vector<int>& num_tile, vec
 }
 
 
-/**
- * Trouve si deux tuiles peuvent se chevaucher
- * 
- * @param a Tuile a
- * @param b Tuile b
- * @param x offset (positif = droite, négatif = gauche ou 0)
- * @param y offset (positif = bas, négatif = haut ou 0)
- * 
- * @return True si le chevauchement est possible
- */
-bool tiles_can_overlap(const Tile &a, const Tile &b, int x, int y) {
-
-    // for (int i = 0; i < TILE_SIZE; ++i) {
-    //     for (int j = 0; j < TILE_SIZE; ++j) {
-
-    //         int ax = i, ay = j; // Bord de la tuile "a"
-    //         int bx = i - x, by = j - y; // Bord de la tuile "b"
-
-    //         if (bx >= 0 && by >= 0 && bx < TILE_SIZE && by < TILE_SIZE){
-
-    //             if (a[ay][ax] != b[by][bx]){ // On compare si les deux bords adjacents des tuiles sont égales
-    //                 return false;
-    //             }
-
-    //         }
-                
-    //     }
-    // }
-
-    return true;
-}
-
 
 /**
  * Génère les voisins compatibles pour chaque tuile
@@ -149,25 +118,63 @@ dicoADJtiles compute_adjacency(const vector<Tile> &tiles) {
 
     dicoADJtiles dico;
 
-    for (size_t i = 0; i < tiles.size(); ++i) {
-        for (size_t j = 0; j < tiles.size(); ++j) {
+    bool isCompatible = true;
 
-            for (int x = -1; x <= 1; ++x) {
-                for (int y = -1; y <= 1; ++y) {
+    int i_start_A, i_end_A, j_start_A, j_end_A;
+    int i_start_B, j_start_B;
 
-                    // if (abs(x) + abs(y) != 1) continue;
-                    if (x == 0 && y ==0) continue;
+    int i_tile_B=0, j_tile_B=0;
 
-                    // Si la tuile peut être chevauchée alors on save celle qui peut
-                    if (tiles_can_overlap(tiles[i], tiles[j], x, y)) {
-                        dico[i][{x, y}].insert(j); // Insertion à la tuile i et à l'offset (dx,dy) l'indice de la tuile adjacente j
+
+    for(int ta=0; ta<(int)tiles.size(); ta++){ // Parcours de toutes les tuiles du vecteur (ta est l'indice de la tuile_A dans la liste)
+
+        for (int x = -(TILE_SIZE-1); x < TILE_SIZE; x++) {
+            for (int y = -(TILE_SIZE-1); y < TILE_SIZE; y++) {
+
+                if(x==0 && y==0){ // Pas besoin de traiter le cas (0,0)
+                    continue;
+                }
+
+                for(int tb=0; tb<(int)tiles.size(); tb++){
+
+                    isCompatible = true;
+
+                    i_start_A = (x<0) ? 0 : x;
+                    i_end_A = (x<0) ? (TILE_SIZE+x) : TILE_SIZE;
+                    j_start_A = (y<0) ? 0 : y;
+                    j_end_A = (y<0) ? (TILE_SIZE+y) : TILE_SIZE;
+
+                    i_start_B = (x<0) ? std::abs(x) : 0;
+                    j_start_B = (y<0) ? std::abs(y) : 0;
+
+                    i_tile_B = i_start_B;
+                    
+                    for (int i = i_start_A; i < i_end_A; i++) {
+                        j_tile_B = j_start_B;
+                        for (int j = j_start_A; j < j_end_A; j++) {
+
+                            if(tiles.at(ta).at(i).at(j) != tiles.at(tb).at(i_tile_B).at(j_tile_B)){
+                                isCompatible = false;
+                            }
+
+                            j_tile_B++;
+        
+                        }
+                        i_tile_B++;
+                    }
+
+                    if(isCompatible){
+                        /* Insertion pour la tuile A de la tuile B aux coordonnées (x,y) */
+                        dico[ta][{x,y}].insert(tb);
                     }
 
                 }
-            }
 
+            }
         }
-    }
+
+    }// fin boucle liste tiles
+
 
     return dico;
 }
@@ -210,73 +217,87 @@ pair<int, int> find_lowest_entropy(const Wave_grid &grille) {
  * 
  * @param grille
  * @param dicoADJ Dictionnaire des tuiles adjacentes
+ * 
+ * @return True si une des cases est vide
  */
-void entropy(Wave_grid &grille, dicoADJtiles& dicoADJ){
+bool entropy(Wave_grid &grille, const dicoADJtiles dicoADJ){
 
     bool miseAjour;
+    bool found = false;
+    bool stop = false;
 
 
     do{
         miseAjour = false; 
 
         // Parcours de la grille
-        for(size_t i=0; i<grille.size(); i++){
-            for(size_t j=0; j<grille[i].size(); j++){
+        for(int i=0; !stop && i<(int)grille.size(); i++){
+            for(int j=0; !stop && j<(int)grille.at(i).size(); j++){
 
-                if (grille[i][j].size() == 1) {
+                if (grille.at(i).at(j).size() == 1) {
                     // Dans le cas où la case de la grille possède déjà 1 seule tuile on n'a pas besoin de l'a traiter donc on skip la prochaine boucle for
+                    continue;
                 }
-                else{
-                    // Parcours des tuiles possible pour une case (i,j) de la grille
-                    for(int k : grille[i][j]){
 
-                        bool estCompatible = true; // variable qui dit si la tuile k est compatible avec ses voisines dans la grille
+         
+                // Parcours des tuiles possible pour une case (i,j) de la grille
+                for(int k : grille.at(i).at(j)){
 
-                        // Pour une tuile k dans la case (i,j) on récupère tous ses voisins possibles
-                        for (auto [offset, tiles_adj] : dicoADJ.at(k)) {
+                    bool estCompatible = true; // variable qui dit si la tuile k est compatible avec ses voisines dans la grille
+
+                    for (int x = -(TILE_SIZE-1); x < TILE_SIZE; x++) {
+                        for (int y = -(TILE_SIZE-1); y < TILE_SIZE; y++) {
+
+                            if(( i+x < 0 || i+x >= (int)grille.size()) || (j+y < 0 || j+y >= (int)grille.size()) || (x == 0 && y == 0)){ // On vérifie si on sort de la grille
+                                continue;
+                            }
+
+
+                            found = false;
                             
-                            size_t voisin_x = i + offset.first;
-                            size_t voisin_y = j + offset.second;
+                            // On cherche ici à savoir si à la case de la grille ([i+x],[j+y]), on trouve au moins un voisin de la tuile k qui se trouve en (i,j)  
+                            if(dicoADJ.at(k).count({x,y})){
+                                for(int a : dicoADJ.at(k).at({x,y})){
 
-                            if(voisin_x >= 0 && voisin_x < grille.size() && voisin_y >= 0 && voisin_y < grille[i].size()){ // On vérifie que le voisin n'est pas en dehors de la grille
-                                // On récupère toutes les tuiles qui peuvent se trouver à la case du voisin dans la grille
-
-                                set<int> liste_tile_voisin = grille[voisin_x][voisin_y];
-
-                                bool found = false;
-
-                                // On cherche si on trouve au moins une tuile qui se trouve dans le même espace que la voisine (offset) de la tuile "k"
-                                for (int t : liste_tile_voisin) {
-                                    if (dicoADJ.at(k).at(offset).count(t)) {
+                                    if( grille.at(i+x).at(j+y).count(a)){
                                         found = true;
-                                        break;
                                     }
                                 }
-
-                                if (!found) {
-                                    estCompatible = false;
-                                    break;
-                                }
-
                             }
-
-                            // Si c'est pas possible de placer cette tuile à la case (i,j) alors on l'a retire de la case
-                            if (!estCompatible) {
-                                grille[i][j].erase(k);
-                                miseAjour = true;
+                            
+                            
+                            if (!found) {
+                                estCompatible = false;
+                                // break;
                             }
+                            
+                        }
+                    }
 
-                        } // for
-                    } // for
+                    // Si c'est pas possible de placer cette tuile à la case (i,j) alors on l'a retire de la case
+                    if (!estCompatible) {
+                        // printf("i: %d, j: %d, k: %d\n", i, j, k);
 
-                } // if la case ne possède pas juste 1 tuile de possible
+                        if(grille.at(i).at(j).count(k)){
+                            grille.at(i).at(j).erase(k);
+                        }
+                        
+                        miseAjour = true;
+                        break;
+                    }
+                
+                } // for
+                
 
             } // for grille j
+
         } // for grille i
 
+    }while(!stop && miseAjour); // Si on met à jour une des cases de la grille, on recommence les calculs
 
-    }while(miseAjour); // Si on met à jour une des cases de la grille, on recommence les calculs
-} 
+    return stop;
+
+} // fin entropy
 
 
 
@@ -329,7 +350,7 @@ void print_tiles_list(vector<Tile>& tiles, vector<int>& num_tile){
  * 
  * @param tile
  */
-void print_tile(Tile tile){
+void print_tile(const Tile tile){
 
     for(int i=0; i<TILE_SIZE; i++) {
         for(int j=0; j<TILE_SIZE; j++) {
@@ -343,24 +364,75 @@ void print_tile(Tile tile){
 
 
 /**
- * Créer une tuile qui a subit une rotation de 180
+ * Affichage des voisines d'une tuile
  * 
- * @param matrix Tuile d'origine
- * 
- * @return Tuile avec rotation
+ * @param n Numéro de la tuile
+ * @param dico Dictionnaire des voisines
  */
-Tile rotateTile(const Tile& matrix) {
-    int rows = matrix.size();
-    if (rows == 0) return {};
-    int cols = matrix[0].size();
+void print_dico(const int n, dicoADJtiles dico){
 
-    Tile result(rows, vector<int>(cols));
+    cout << "Tuile " << n << ":" << endl;
+
+    for (int x = -(TILE_SIZE-1); x < TILE_SIZE; x++) {
+        for (int y = -(TILE_SIZE-1); y < TILE_SIZE; y++) {
+            printf("[%d,%d] : ", x, y);
+
+            for(auto a : dico[n][{x,y}]){
+                cout << a << " ";
+            }
+
+            cout << endl;
+        }
+    }
+    
+} // fin print_dico
+
+
+vector2D matToVector(const cv::Mat& mat) {
+    std::vector<std::vector<int>> vec(mat.rows, std::vector<int>(mat.cols));
+
+    for (int i = 0; i < mat.rows; ++i)
+        for (int j = 0; j < mat.cols; ++j)
+            vec[i][j] = mat.at<int>(i, j);
+
+    return vec;
+}
+
+
+cv::Mat vectorToMat(const std::vector<std::vector<int>>& vec) {
+    int rows = vec.size();
+    int cols = vec[0].size();
+    cv::Mat mat(rows, cols, CV_32SC1);
+
+    for (int i = 0; i < rows; ++i)
+        for (int j = 0; j < cols; ++j)
+            mat.at<int>(i, j) = vec[i][j];
+
+    return mat;
+}
+
+
+
+cv::Mat intMatrixToImage(const std::vector<std::vector<int>>& intMatrix) {
+    int rows = intMatrix.size();
+    int cols = intMatrix[0].size();
+    cv::Mat img(rows, cols, CV_8UC3); // image RGB
 
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
-            result[rows - 1 - i][cols - 1 - j] = matrix[i][j];
+            int value = intMatrix[i][j];
+            uchar r = (value >> 16) & 0xFF;
+            uchar g = (value >> 8) & 0xFF;
+            uchar b = value & 0xFF;
+
+            img.at<cv::Vec3b>(i, j) = cv::Vec3b(b, g, r); // OpenCV: BGR
         }
     }
 
-    return result;
+    return img;
+}
+
+
+int rgbToInt(int r, int g, int b) {
+    return (r << 16) | (g << 8) | b;
 }

@@ -26,10 +26,10 @@ OBJECTS_O = $(OBJECTS) $(EXEC_O)
 
 CC = g++
 CCFLAGS_STD =-O3 -Wall -march=native -mtune=native
-CCFLAGS_DEBUG = -D _DEBUG_
+CCFLAGS_DEBUG = -D _DEBUG_ -g -O0
 CCFLAGS = $(CCFLAGS_STD)
 CCFLAGOMP = -fopenmp
-CCLIBS = 
+CCLIBS = -lopencv_core -lopencv_imgcodecs -lopencv_highgui -lopencv_imgproc
 
 #
 # RULES
@@ -63,7 +63,7 @@ clean:
 	@echo "Delete objects, temporary files..."
 	@rm -f $(OBJECTS) $(EXEC_O)
 	@rm -f *~ *#
-	@rm -f $(EXEC)
+	@rm -f $(EXEC).exe
 	@rm -f dependancies
 	@echo "Done."
 
@@ -90,3 +90,5 @@ archive: clean
 	@echo "Done."
 
 # DEPENDANCIES
+wavefunction.o: wavefunction.cpp wavefunction.h
+main.o: main.cpp wavefunction.h

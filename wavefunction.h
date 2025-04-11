@@ -14,6 +14,7 @@
 #include <map>
 #include <random>
 #include <climits> 
+#include <opencv2/opencv.hpp>
 
 #include <omp.h>
 
@@ -21,9 +22,9 @@
 using namespace std;
 
 
-#define TILE_SIZE 2 // Taille des tuiles
-#define GRILLE_SIZE_WIDTH 20
-#define GRILLE_SIZE_HEIGHT 20
+#define TILE_SIZE 10 // Taille des tuiles
+#define GRILLE_SIZE_WIDTH 128
+#define GRILLE_SIZE_HEIGHT 128
 
 
 
@@ -38,20 +39,26 @@ using vector2D = vector<vector<int>>;
     donnée (clé 2). 
 */
 using dicoADJtiles = map<int, map<pair<int, int>, set<int>>>; 
+using Image = vector<vector<int>>;
+
+
 
 
 
 int tile_is_in_list(vector<Tile>& tiles, Tile& t);
 void save_tiles_from_grid_sample(vector<Tile>& tiles, vector<int>& num_tile, vector2D& grid_sample);
-bool tiles_can_overlap(const Tile &a, const Tile &b, int x, int y);
 dicoADJtiles compute_adjacency(const vector<Tile> &tiles);
-void entropy(Wave_grid &grille, dicoADJtiles& dicoADJ);
+bool entropy(Wave_grid &grille, const dicoADJtiles dicoADJ);
 pair<int, int> find_lowest_entropy(const Wave_grid &grille);
 void print_tiles_list(vector<Tile>& tiles);
 void print_tiles_list(vector<Tile>& tiles, vector<int>& num_tile);
-Tile rotateTile(const Tile& matrix);
-void print_tile(Tile tile);
+void print_tile(const Tile tile);
+void print_dico(const int n, dicoADJtiles dico);
 
+cv::Mat vectorToMat(const std::vector<std::vector<int>>& vec);
+std::vector<std::vector<int>> matToVector(const cv::Mat& mat);
+cv::Mat intMatrixToImage(const std::vector<std::vector<int>>& intMatrix);
+int rgbToInt(int r, int g, int b);
 
 
 
