@@ -87,11 +87,25 @@ int main(int argc, char* argv[]){
     // };
 
 
+    // vector2D grid_sample {
+    //     {0, 0, 1, 0, 0, 0, 1, 0, 0, 0},
+    //     {0, 0, 1, 0, 0, 0, 1, 0, 0, 0},
+    //     {1, 1, 1, 0, 0, 1, 1, 1, 1, 1},
+    //     {0, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+    //     {0, 1, 1, 0, 0, 1, 1, 1, 0, 0},
+    //     {0, 0, 1, 0, 0, 0, 1, 1, 0, 0},
+    //     {1, 1, 1, 1, 0, 0, 1, 1, 1, 1},
+    //     {0, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+    //     {0, 1, 1, 1, 0, 0, 1, 0, 0, 0},
+    //     {0, 0, 1, 0, 0, 0, 1, 0, 0, 0}
+    // };
+
+
 
 
     // Chargement de l'image sample
 
-    cv::Mat img = cv::imread("template1.png", cv::IMREAD_COLOR);
+    cv::Mat img = cv::imread("template2.png", cv::IMREAD_COLOR);
 
     // Convertir RGB -> intMatrix (cv::Mat)
     cv::Mat intMat(img.rows, img.cols, CV_32SC1);
@@ -102,11 +116,7 @@ int main(int argc, char* argv[]){
         }
 
     // Matrice vers vector<vector<int>>
-    auto grid_sample = matToVector(intMat);
-
-
-
-
+    vector2D grid_sample = matToVector(intMat);
 
 
     
@@ -144,6 +154,11 @@ int main(int argc, char* argv[]){
 
     int nb_tour=0;
 
+    /*
+    On parallelise sous forme de tâches.
+    1 tache correspond à un case avec une tuile de départ
+    */
+
     // Génération de la map
     while (true) {
         nb_tour++;
@@ -172,31 +187,29 @@ int main(int argc, char* argv[]){
     cout << "nb tour: " << nb_tour << endl;
 
 
-    // Affichage de la grille finale (coin haut gauche de chaque tuile)
-    int k=0, l=0;
-   Image image(GRILLE_SIZE_HEIGHT, vector<int>(GRILLE_SIZE_WIDTH));
+    vector2D image(IMAGE_HEIGHT, vector<int>(IMAGE_WIDTH));
 
-    for (size_t i = 0; i < grille.size(); i+=TILE_SIZE) {
-        for (size_t x = 0; x < TILE_SIZE; x++) {
-            for (size_t j = 0; j < grille[i].size(); j+=TILE_SIZE) {
+    // Affichage de la grille finale
+    for(int i=0; i<(int)grille.size(); i++){
+        for(int j=0; j<(int)grille.at(i).size(); j++){
 
-                int id = *grille[i][j].begin();
+            int id = *grille[i][j].begin();
 
-                for (size_t y = 0; y < TILE_SIZE; y++) {
-                    // cout << list_tile[id][x][y] << " ";
-                    image.at(k).at(l) = list_tile[id][x][y];
-                    l = (l<GRILLE_SIZE_WIDTH-1)?l+1:0;
+            for(int x=0; x<TILE_SIZE; x++){
+                for(int y=0; y<TILE_SIZE; y++){
+                    if((i*(TILE_SIZE-1))+x >= 0 && (i*(TILE_SIZE-1))+x < (int)image.size() && (j*(TILE_SIZE-1))+y >= 0 && (j*(TILE_SIZE-1))+y < (int)image.size()){
+                        image.at((i*(TILE_SIZE-1))+x).at((j*(TILE_SIZE-1))+y) = list_tile[id][x][y];
+                    }
                 }
-
             }
-            // cout << endl;
-            k = (k<GRILLE_SIZE_HEIGHT-1)?k+1:0;
         }
     }
 
+    // print_vector2D(image);
 
 
-    // Vector vers Mat
+
+    // // Vector vers Mat
     cv::Mat recoveredMat = vectorToMat(image);
 
     // Recréer une image couleur à partir de la matrice d'entiers

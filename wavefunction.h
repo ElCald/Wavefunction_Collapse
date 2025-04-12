@@ -22,9 +22,13 @@
 using namespace std;
 
 
-#define TILE_SIZE 10 // Taille des tuiles
-#define GRILLE_SIZE_WIDTH 128
-#define GRILLE_SIZE_HEIGHT 128
+#define TILE_SIZE 3 // Taille des tuiles
+
+#define IMAGE_WIDTH 128
+#define IMAGE_HEIGHT 128
+
+#define GRILLE_SIZE_WIDTH (IMAGE_WIDTH / TILE_SIZE)+1
+#define GRILLE_SIZE_HEIGHT (IMAGE_HEIGHT / TILE_SIZE)+1
 
 
 
@@ -48,12 +52,13 @@ using Image = vector<vector<int>>;
 int tile_is_in_list(vector<Tile>& tiles, Tile& t);
 void save_tiles_from_grid_sample(vector<Tile>& tiles, vector<int>& num_tile, vector2D& grid_sample);
 dicoADJtiles compute_adjacency(const vector<Tile> &tiles);
-bool entropy(Wave_grid &grille, const dicoADJtiles dicoADJ);
+void entropy(Wave_grid &grille, const dicoADJtiles dicoADJ);
 pair<int, int> find_lowest_entropy(const Wave_grid &grille);
 void print_tiles_list(vector<Tile>& tiles);
 void print_tiles_list(vector<Tile>& tiles, vector<int>& num_tile);
 void print_tile(const Tile tile);
 void print_dico(const int n, dicoADJtiles dico);
+void print_vector2D(const vector2D vec);
 
 cv::Mat vectorToMat(const std::vector<std::vector<int>>& vec);
 std::vector<std::vector<int>> matToVector(const cv::Mat& mat);

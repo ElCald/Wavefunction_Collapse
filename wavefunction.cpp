@@ -125,27 +125,37 @@ dicoADJtiles compute_adjacency(const vector<Tile> &tiles) {
 
     int i_tile_B=0, j_tile_B=0;
 
+    int real_x=0, real_y=0;
+
 
     for(int ta=0; ta<(int)tiles.size(); ta++){ // Parcours de toutes les tuiles du vecteur (ta est l'indice de la tuile_A dans la liste)
 
-        for (int x = -(TILE_SIZE-1); x < TILE_SIZE; x++) {
-            for (int y = -(TILE_SIZE-1); y < TILE_SIZE; y++) {
+        // OFFSET
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
 
                 if(x==0 && y==0){ // Pas besoin de traiter le cas (0,0)
                     continue;
                 }
 
+                real_x = x*(TILE_SIZE-1);
+                real_y = y*(TILE_SIZE-1);
+
+                // if((x>-(TILE_SIZE-1) && x<TILE_SIZE-1) && (y>-(TILE_SIZE-1) && y<TILE_SIZE-1)){
+                //     continue;
+                // }
+
                 for(int tb=0; tb<(int)tiles.size(); tb++){
 
                     isCompatible = true;
 
-                    i_start_A = (x<0) ? 0 : x;
-                    i_end_A = (x<0) ? (TILE_SIZE+x) : TILE_SIZE;
-                    j_start_A = (y<0) ? 0 : y;
-                    j_end_A = (y<0) ? (TILE_SIZE+y) : TILE_SIZE;
+                    i_start_A = (real_x<0) ? 0 : real_x;
+                    i_end_A = (real_x<0) ? (TILE_SIZE+real_x) : TILE_SIZE;
+                    j_start_A = (real_y<0) ? 0 : real_y;
+                    j_end_A = (real_y<0) ? (TILE_SIZE+real_y) : TILE_SIZE;
 
-                    i_start_B = (x<0) ? std::abs(x) : 0;
-                    j_start_B = (y<0) ? std::abs(y) : 0;
+                    i_start_B = (real_x<0) ? std::abs(real_x) : 0;
+                    j_start_B = (real_y<0) ? std::abs(real_y) : 0;
 
                     i_tile_B = i_start_B;
                     
@@ -220,19 +230,21 @@ pair<int, int> find_lowest_entropy(const Wave_grid &grille) {
  * 
  * @return True si une des cases est vide
  */
-bool entropy(Wave_grid &grille, const dicoADJtiles dicoADJ){
+void entropy(Wave_grid &grille, const dicoADJtiles dicoADJ){
 
     bool miseAjour;
     bool found = false;
-    bool stop = false;
+
+    int real_x = 0;
+    int real_y = 0;
 
 
     do{
         miseAjour = false; 
 
         // Parcours de la grille
-        for(int i=0; !stop && i<(int)grille.size(); i++){
-            for(int j=0; !stop && j<(int)grille.at(i).size(); j++){
+        for(int i=0; i<(int)grille.size(); i++){
+            for(int j=0; j<(int)grille.at(i).size(); j++){
 
                 if (grille.at(i).at(j).size() == 1) {
                     // Dans le cas où la case de la grille possède déjà 1 seule tuile on n'a pas besoin de l'a traiter donc on skip la prochaine boucle for
@@ -245,10 +257,16 @@ bool entropy(Wave_grid &grille, const dicoADJtiles dicoADJ){
 
                     bool estCompatible = true; // variable qui dit si la tuile k est compatible avec ses voisines dans la grille
 
-                    for (int x = -(TILE_SIZE-1); x < TILE_SIZE; x++) {
-                        for (int y = -(TILE_SIZE-1); y < TILE_SIZE; y++) {
+                    for (int x = -1; x <= 1; x++) {
+                        for (int y = -1; y <= 1; y++) {
 
-                            if(( i+x < 0 || i+x >= (int)grille.size()) || (j+y < 0 || j+y >= (int)grille.size()) || (x == 0 && y == 0)){ // On vérifie si on sort de la grille
+                            // real_x = x*(TILE_SIZE-1);
+                            // real_y = y*(TILE_SIZE-1);
+
+                            real_x = x;
+                            real_y = y;
+
+                            if(( i+real_x < 0 || i+real_x >= (int)grille.size()) || (j+real_y < 0 || j+real_y >= (int)grille.size()) || (x == 0 && y == 0)){ // On vérifie si on sort de la grille
                                 continue;
                             }
 
@@ -259,7 +277,7 @@ bool entropy(Wave_grid &grille, const dicoADJtiles dicoADJ){
                             if(dicoADJ.at(k).count({x,y})){
                                 for(int a : dicoADJ.at(k).at({x,y})){
 
-                                    if( grille.at(i+x).at(j+y).count(a)){
+                                    if( grille.at(i+real_x).at(j+real_y).count(a)){
                                         found = true;
                                     }
                                 }
@@ -290,12 +308,9 @@ bool entropy(Wave_grid &grille, const dicoADJtiles dicoADJ){
                 
 
             } // for grille j
-
         } // for grille i
 
-    }while(!stop && miseAjour); // Si on met à jour une des cases de la grille, on recommence les calculs
-
-    return stop;
+    }while(miseAjour); // Si on met à jour une des cases de la grille, on recommence les calculs
 
 } // fin entropy
 
@@ -373,8 +388,8 @@ void print_dico(const int n, dicoADJtiles dico){
 
     cout << "Tuile " << n << ":" << endl;
 
-    for (int x = -(TILE_SIZE-1); x < TILE_SIZE; x++) {
-        for (int y = -(TILE_SIZE-1); y < TILE_SIZE; y++) {
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
             printf("[%d,%d] : ", x, y);
 
             for(auto a : dico[n][{x,y}]){
@@ -386,6 +401,26 @@ void print_dico(const int n, dicoADJtiles dico){
     }
     
 } // fin print_dico
+
+
+
+/**
+ * Affichage d'un vector2D
+ * 
+ * @param vec
+ */
+void print_vector2D(const vector2D vec){
+
+    for(int i=0; i<(int)vec.size(); i++) {
+        for(int j=0; j<(int)vec.at(i).size(); j++) {
+            cout << vec.at(i).at(j) << " ";
+        }
+        cout << endl;
+    }
+    cout << endl;
+}
+
+
 
 
 vector2D matToVector(const cv::Mat& mat) {
@@ -424,6 +459,11 @@ cv::Mat intMatrixToImage(const std::vector<std::vector<int>>& intMatrix) {
             uchar r = (value >> 16) & 0xFF;
             uchar g = (value >> 8) & 0xFF;
             uchar b = value & 0xFF;
+
+            // uchar r = value * 255;
+            // uchar g = value * 255;
+            // uchar b = value * 255;
+
 
             img.at<cv::Vec3b>(i, j) = cv::Vec3b(b, g, r); // OpenCV: BGR
         }
