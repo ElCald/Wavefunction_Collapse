@@ -140,83 +140,136 @@ int main(int argc, char* argv[]){
 
 
     // Initialisation de la grille
-    Wave_grid grille(GRILLE_SIZE_HEIGHT, vector<set<int>>(GRILLE_SIZE_WIDTH));
+    // Wave_grid grille(GRILLE_SIZE_HEIGHT, vector<set<int>>(GRILLE_SIZE_WIDTH));
 
     
-    for (size_t i = 0; i < grille.size(); i++){
-        for (size_t j = 0; j < grille.at(i).size(); j++){
-            for (size_t k = 0; k < list_tile.size(); k++){
-                grille[i][j].insert(k);
-            }
-        }
-    }
+    // for (size_t i = 0; i < grille.size(); i++){
+    //     for (size_t j = 0; j < grille.at(i).size(); j++){
+    //         for (size_t k = 0; k < list_tile.size(); k++){
+    //             grille[i][j].insert(k);
+    //         }
+    //     }
+    // }
 
 
     int nb_tour=0;
+
+    int nb_tasks = (GRILLE_SIZE_HEIGHT * GRILLE_SIZE_WIDTH * list_tile.size());
+
+    cout << "Taille grille: " << GRILLE_SIZE_HEIGHT << "x" << GRILLE_SIZE_WIDTH << " = " << GRILLE_SIZE_HEIGHT * GRILLE_SIZE_WIDTH << endl;
+    cout << "Nb tuiles: " << list_tile.size() << endl;
+    cout << "Nb tasks: " << nb_tasks << endl;
 
     /*
     On parallelise sous forme de tâches.
     1 tache correspond à un case avec une tuile de départ
     */
 
-    // Génération de la map
-    while (true) {
-        nb_tour++;
-        // grille.clear();
+    // // Génération de la map
+    // while (true) {
+    //     nb_tour++;
+    //     // grille.clear();
 
-        // On cherche dans la grille, la case avec la plus petite entropie
-        auto [x, y] = find_lowest_entropy(grille);
+    //     // On cherche dans la grille, la case avec la plus petite entropie
+    //     auto [x, y] = find_lowest_entropy(grille);
 
-        // Dans le cas où toutes les cases on une tuile adapté, alors la plus petite entropie sera 1, donc on s'arrête
-        if (x == -1) break;
+    //     // Dans le cas où toutes les cases on une tuile adapté, alors la plus petite entropie sera 1, donc on s'arrête
+    //     if (x == -1) break;
 
-        // Si c'est le 1er tour ou que notre grille n'est pas parfaite
+    //     // Si c'est le 1er tour ou que notre grille n'est pas parfaite
 
-        // On choisi aléatoirement dans la grille une case pour lui fixer une tuile parmis toutes celles qu'il pourrait avoir (soit toutes les tuiles enfaite)
-        vector<int> options(grille.at(x).at(y).begin(), grille.at(x).at(y).end());
+    //     // On choisi aléatoirement dans la grille une case pour lui fixer une tuile parmis toutes celles qu'il pourrait avoir (soit toutes les tuiles enfaite)
+    //     vector<int> options(grille.at(x).at(y).begin(), grille.at(x).at(y).end());
 
-        // Choix aléatoire d'une des tuiles
-        int choice = options[rand() % options.size()];
-        grille.at(x).at(y) = {choice}; // tuile fixé
+    //     // Choix aléatoire d'une des tuiles
+    //     int choice = options[rand() % options.size()];
+    //     grille.at(x).at(y) = {choice}; // tuile fixé
 
-        // Calcul de la map
-        entropy(grille, dicoADJ);
-    }
-
-
-    cout << "nb tour: " << nb_tour << endl;
+    //     // Calcul de la map
+    //     entropy(grille, dicoADJ);
+    // }
 
 
-    vector2D image(IMAGE_HEIGHT, vector<int>(IMAGE_WIDTH));
+    bool trouve = false;
+    int start_i=-1, start_j=-1, start_k=-1;
 
-    // Affichage de la grille finale
-    for(int i=0; i<(int)grille.size(); i++){
-        for(int j=0; j<(int)grille.at(i).size(); j++){
+    for(int i=0; i<(int)GRILLE_SIZE_HEIGHT; i++){
+        for(int j=0; j<(int)GRILLE_SIZE_WIDTH; j++){
+            for(int k=0; k<(int)list_tile.size(); k++){
 
-            int id = *grille[i][j].begin();
-
-            for(int x=0; x<TILE_SIZE; x++){
-                for(int y=0; y<TILE_SIZE; y++){
-                    if((i*(TILE_SIZE-1))+x >= 0 && (i*(TILE_SIZE-1))+x < (int)image.size() && (j*(TILE_SIZE-1))+y >= 0 && (j*(TILE_SIZE-1))+y < (int)image.size()){
-                        image.at((i*(TILE_SIZE-1))+x).at((j*(TILE_SIZE-1))+y) = list_tile[id][x][y];
+                Wave_grid grille(GRILLE_SIZE_HEIGHT, vector<set<int>>(GRILLE_SIZE_WIDTH));
+                
+                // init de la grille
+                for (size_t a = 0; a < GRILLE_SIZE_HEIGHT; a++){
+                    for (size_t b = 0; b < GRILLE_SIZE_WIDTH; b++){
+                        for (size_t c = 0; c < list_tile.size(); c++){
+                            grille.at(a).at(b).insert(c);
+                        }
                     }
                 }
+
+/*
+                grille.at(i).at(j).clear();
+                grille.at(i).at(j).insert(k);
+
+                // calcul de la grille
+                // entropy(grille, dicoADJ);
+
+                auto [x, y] = find_lowest_entropy(grille);
+
+                // Dans le cas où toutes les cases on une tuile adapté, alors la plus petite entropie sera 1, donc on s'arrête
+                if (!trouve && x == -1){
+                    start_i=i;
+                    start_j=j;
+                    start_k=k;
+                    trouve = true;
+                }
+*/                
+                if(!trouve){
+                    nb_tour++;
+                }
+                
             }
         }
     }
+
+
+
+    cout << "Trouvé: " << trouve << endl;
+    printf("start i: %d, j: %d, k: %d\n", start_i, start_j, start_k);
+    cout << "nb tour: " << nb_tour << endl;
+
+
+    // vector2D image(IMAGE_HEIGHT, vector<int>(IMAGE_WIDTH));
+
+    // // Affichage de la grille finale
+    // for(int i=0; i<(int)grille.size(); i++){
+    //     for(int j=0; j<(int)grille.at(i).size(); j++){
+
+    //         int id = *grille[i][j].begin();
+
+    //         for(int x=0; x<TILE_SIZE; x++){
+    //             for(int y=0; y<TILE_SIZE; y++){
+    //                 if((i*(TILE_SIZE-1))+x >= 0 && (i*(TILE_SIZE-1))+x < (int)image.size() && (j*(TILE_SIZE-1))+y >= 0 && (j*(TILE_SIZE-1))+y < (int)image.size()){
+    //                     image.at((i*(TILE_SIZE-1))+x).at((j*(TILE_SIZE-1))+y) = list_tile[id][x][y];
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     // print_vector2D(image);
 
 
 
-    // // Vector vers Mat
-    cv::Mat recoveredMat = vectorToMat(image);
+    // // // Vector vers Mat
+    // cv::Mat recoveredMat = vectorToMat(image);
 
-    // Recréer une image couleur à partir de la matrice d'entiers
-    cv::Mat reconstructedImage = intMatrixToImage(image);
+    // // Recréer une image couleur à partir de la matrice d'entiers
+    // cv::Mat reconstructedImage = intMatrixToImage(image);
 
-    // Sauvegarde
-    cv::imwrite("reconstructed.png", reconstructedImage);
+    // // Sauvegarde
+    // cv::imwrite("reconstructed.png", reconstructedImage);
 
 
 
