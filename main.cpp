@@ -1,107 +1,46 @@
 #include "wavefunction.h"
 #include <fstream>
 
+using namespace std;
 
-
-void savePPM(const string &filename, const Image &image, int width, int height)
+// Reconstruction de l'image à partir d'une grille et stockage dans `image`
+void write_image_from_grille(const Wave_grid &grille, vector2D &image, const vector<Tile> &list_tile)
 {
-    ofstream file(filename);
-    if (!file.is_open())
-        return;
-
-    file << "P3\n" << width << " " << height << "\n255\n";
-
-    for (int y = 0; y < height; y++)
+    for (int i = 0; i < (int)grille.size(); i++)
     {
-        for (int x = 0; x < width; x++)
+        for (int j = 0; j < (int)grille[i].size(); j++)
         {
-            int color = image[y][x];
-            color = (color == 1)?255:1;
-            file << color << " " << color << " " << color << " ";
+
+            int id = *grille[i][j].begin();
+
+            for (int x = 0; x < TILE_SIZE; x++)
+            {
+                for (int y = 0; y < TILE_SIZE; y++)
+                {
+                    int img_x = i * (TILE_SIZE - 1) + x;
+                    int img_y = j * (TILE_SIZE - 1) + y;
+
+                    if (img_x >= 0 && img_x < (int)image.size() && img_y >= 0 && img_y < (int)image[0].size())
+                    {
+                        image[img_x][img_y] = list_tile[id][x][y];
+                    }
+                }
+            }
         }
-        file << "\n";
     }
-    file.close();
 }
 
-
-
-
-int main(int argc, char* argv[]){
+int main(int argc, char *argv[])
+{
 
     srand(time(nullptr));
 
     // Liste des tuiles de la grille
 
     vector<Tile> list_tile; // Liste de tuiles
-    vector<int> num_tile; // Nombre de tuile à l'indice de celle-ci dans la liste
+    vector<int> num_tile;   // Nombre de tuile à l'indice de celle-ci dans la liste
 
     dicoADJtiles dicoADJ;
-
-
-    // Grille sample
-    // vector2D grid_sample {
-    //     {0, 0, 0, 0, 0, 0, 0, 0, 0},
-    //     {0, 0, 0, 0, 1, 0, 0, 0, 0},
-    //     {0, 0, 0, 1, 1, 1, 0, 0, 0},
-    //     {0, 0, 1, 1, 0, 1, 1, 0, 0},
-    //     {0, 1, 1, 0, 0, 0, 1, 1, 0},
-    //     {0, 0, 1, 1, 0, 1, 1, 0, 0},
-    //     {0, 0, 0, 1, 1, 1, 0, 0, 0},
-    //     {0, 0, 0, 0, 1, 0, 0, 0, 0},
-    //     {0, 0, 0, 0, 0, 0, 0, 0, 0}
-    // };
-
-    // vector2D grid_sample {
-    //     {0, 0, 0, 0, 0},
-    //     {0, 0, 1, 0, 0},
-    //     {0, 1, 0, 1, 0},
-    //     {0, 0, 1, 0, 0},
-    //     {0, 0, 0, 0, 0}
-    // };
-
-    // vector2D grid_sample {
-    //     {0, 1, 0, 1},
-    //     {1, 0, 1, 0},
-    //     {0, 1, 0, 1},
-    //     {1, 0, 1, 0}
-    // };
-
-    // vector2D grid_sample {
-    //     {0, 2, 1, 2, 0, 0},
-    //     {0, 2, 1, 2, 0, 0},
-    //     {2, 2, 1, 2, 2, 2},
-    //     {1, 1, 1, 1, 1, 2},
-    //     {2, 2, 2, 2, 1, 2},
-    //     {0, 0, 0, 2, 1, 2}
-    // };
-
-    // vector2D grid_sample {
-    //     {1, 1, 1, 1, 0, 0, 0},
-    //     {1, 2, 2, 1, 0, 0, 0},
-    //     {1, 2, 2, 1, 0, 0, 0},
-    //     {1, 1, 1, 1, 0, 0, 0},
-    //     {0, 0, 0, 0, 0, 0, 0},
-    //     {0, 0, 0, 0, 3, 3, 0},
-    //     {0, 0, 0, 0, 3, 3, 0},
-    // };
-
-
-    // vector2D grid_sample {
-    //     {0, 0, 1, 0, 0, 0, 1, 0, 0, 0},
-    //     {0, 0, 1, 0, 0, 0, 1, 0, 0, 0},
-    //     {1, 1, 1, 0, 0, 1, 1, 1, 1, 1},
-    //     {0, 1, 1, 1, 1, 1, 1, 1, 0, 0},
-    //     {0, 1, 1, 0, 0, 1, 1, 1, 0, 0},
-    //     {0, 0, 1, 0, 0, 0, 1, 1, 0, 0},
-    //     {1, 1, 1, 1, 0, 0, 1, 1, 1, 1},
-    //     {0, 1, 1, 1, 1, 1, 1, 1, 0, 0},
-    //     {0, 1, 1, 1, 0, 0, 1, 0, 0, 0},
-    //     {0, 0, 1, 0, 0, 0, 1, 0, 0, 0}
-    // };
-
-
-
 
     // Chargement de l'image sample
 
@@ -110,7 +49,8 @@ int main(int argc, char* argv[]){
     // Convertir RGB -> intMatrix (cv::Mat)
     cv::Mat intMat(img.rows, img.cols, CV_32SC1);
     for (int i = 0; i < img.rows; ++i)
-        for (int j = 0; j < img.cols; ++j) {
+        for (int j = 0; j < img.cols; ++j)
+        {
             cv::Vec3b px = img.at<cv::Vec3b>(i, j);
             intMat.at<int>(i, j) = (px[2] << 16) | (px[1] << 8) | px[0];
         }
@@ -118,13 +58,9 @@ int main(int argc, char* argv[]){
     // Matrice vers vector<vector<int>>
     vector2D grid_sample = matToVector(intMat);
 
-
-    
-
     // Extraction des tuiles
     save_tiles_from_grid_sample(list_tile, num_tile, grid_sample);
     // print_tiles_list(list_tile, num_tile);
-    
 
     // Recherche de toutes les tuiles voisines
     dicoADJ = compute_adjacency(list_tile);
@@ -134,15 +70,9 @@ int main(int argc, char* argv[]){
     //     print_dico(i, dicoADJ);
     // }
 
-    
-
-
-
-
     // Initialisation de la grille
     // Wave_grid grille(GRILLE_SIZE_HEIGHT, vector<set<int>>(GRILLE_SIZE_WIDTH));
 
-    
     // for (size_t i = 0; i < grille.size(); i++){
     //     for (size_t j = 0; j < grille.at(i).size(); j++){
     //         for (size_t k = 0; k < list_tile.size(); k++){
@@ -151,12 +81,11 @@ int main(int argc, char* argv[]){
     //     }
     // }
 
+    int nb_tour = 0;
 
-    int nb_tour=0;
+    int nb_tasks = (GRILLE_SIZE_HEIGHT * GRILLE_SIZE_WIDTH * (int)list_tile.size());
 
-    int nb_tasks = (GRILLE_SIZE_HEIGHT * GRILLE_SIZE_WIDTH * list_tile.size());
-
-    cout << "Taille grille: " << GRILLE_SIZE_HEIGHT << "x" << GRILLE_SIZE_WIDTH << " = " << GRILLE_SIZE_HEIGHT * GRILLE_SIZE_WIDTH << endl;
+    cout << "Taille grille: " << GRILLE_SIZE_HEIGHT << "x" << GRILLE_SIZE_WIDTH << " = " << (GRILLE_SIZE_HEIGHT * GRILLE_SIZE_WIDTH) << endl;
     cout << "Nb tuiles: " << list_tile.size() << endl;
     cout << "Nb tasks: " << nb_tasks << endl;
 
@@ -189,89 +118,105 @@ int main(int argc, char* argv[]){
     //     entropy(grille, dicoADJ);
     // }
 
-
     bool trouve = false;
-    int start_i=-1, start_j=-1, start_k=-1;
+    int start_i = -1, start_j = -1, start_k = -1;
 
-    for(int i=0; i<(int)GRILLE_SIZE_HEIGHT; i++){
-        for(int j=0; j<(int)GRILLE_SIZE_WIDTH; j++){
-            for(int k=0; k<(int)list_tile.size(); k++){
+    double t_avant = omp_get_wtime();
 
-                Wave_grid grille(GRILLE_SIZE_HEIGHT, vector<set<int>>(GRILLE_SIZE_WIDTH));
-                
-                // init de la grille
-                for (size_t a = 0; a < GRILLE_SIZE_HEIGHT; a++){
-                    for (size_t b = 0; b < GRILLE_SIZE_WIDTH; b++){
-                        for (size_t c = 0; c < list_tile.size(); c++){
-                            grille.at(a).at(b).insert(c);
-                        }
-                    }
-                }
-
-/*
-                grille.at(i).at(j).clear();
-                grille.at(i).at(j).insert(k);
-
-                // calcul de la grille
-                // entropy(grille, dicoADJ);
-
-                auto [x, y] = find_lowest_entropy(grille);
-
-                // Dans le cas où toutes les cases on une tuile adapté, alors la plus petite entropie sera 1, donc on s'arrête
-                if (!trouve && x == -1){
-                    start_i=i;
-                    start_j=j;
-                    start_k=k;
-                    trouve = true;
-                }
-*/                
-                if(!trouve){
-                    nb_tour++;
-                }
-                
+    Wave_grid base(GRILLE_SIZE_HEIGHT, vector<set<int>>(GRILLE_SIZE_WIDTH));
+    for (int a = 0; a < GRILLE_SIZE_HEIGHT; a++)
+    {
+        for (int b = 0; b < GRILLE_SIZE_WIDTH; b++)
+        {
+            for (int c = 0; c < (int)list_tile.size(); c++)
+            {
+                base[a][b].insert(c);
             }
         }
     }
 
+    vector2D image(IMAGE_HEIGHT, vector<int>(IMAGE_WIDTH));
 
+#pragma omp parallel for collapse(3) shared(trouve, start_i, start_j, start_k, nb_tour, base, image) default(none) firstprivate(list_tile, dicoADJ) schedule(dynamic)
+    for (int i = 0; i < (int)GRILLE_SIZE_HEIGHT; i++)
+    {
+        for (int j = 0; j < (int)GRILLE_SIZE_WIDTH; j++)
+        {
+            for (int k = 0; k < (int)list_tile.size(); k++)
+            {
+
+                if (trouve)
+                    continue;
+
+                Wave_grid grille = base;
+
+                grille[i][j].clear();
+                grille[i][j].insert(k);
+
+                entropy(grille, dicoADJ);
+
+                auto [x, y] = find_lowest_entropy(grille);
+
+                if (x == -1)
+                {
+#pragma omp critical(image_write)
+                    {
+                        if (!trouve)
+                        {
+                            trouve = true;
+                            start_i = i;
+                            start_j = j;
+                            start_k = k;
+
+                            write_image_from_grille(grille, image, list_tile);
+                        }
+                    }
+                }
+
+#pragma omp atomic
+                nb_tour++;
+            }
+        }
+    }
+
+    double t_apres = omp_get_wtime();
 
     cout << "Trouvé: " << trouve << endl;
     printf("start i: %d, j: %d, k: %d\n", start_i, start_j, start_k);
     cout << "nb tour: " << nb_tour << endl;
+    printf("Algo resolu en : %f seconds\n", t_apres - t_avant);
 
+    // Affichage de la grille finale
+    /*for (int i = 0; i < (int)grille.size(); i++)
+    {
+        for (int j = 0; j < (int)grille.at(i).size(); j++)
+        {
 
-    // vector2D image(IMAGE_HEIGHT, vector<int>(IMAGE_WIDTH));
+            int id = *grille[i][j].begin();
 
-    // // Affichage de la grille finale
-    // for(int i=0; i<(int)grille.size(); i++){
-    //     for(int j=0; j<(int)grille.at(i).size(); j++){
-
-    //         int id = *grille[i][j].begin();
-
-    //         for(int x=0; x<TILE_SIZE; x++){
-    //             for(int y=0; y<TILE_SIZE; y++){
-    //                 if((i*(TILE_SIZE-1))+x >= 0 && (i*(TILE_SIZE-1))+x < (int)image.size() && (j*(TILE_SIZE-1))+y >= 0 && (j*(TILE_SIZE-1))+y < (int)image.size()){
-    //                     image.at((i*(TILE_SIZE-1))+x).at((j*(TILE_SIZE-1))+y) = list_tile[id][x][y];
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+            for (int x = 0; x < TILE_SIZE; x++)
+            {
+                for (int y = 0; y < TILE_SIZE; y++)
+                {
+                    if ((i * (TILE_SIZE - 1)) + x >= 0 && (i * (TILE_SIZE - 1)) + x < (int)image.size() && (j * (TILE_SIZE - 1)) + y >= 0 && (j * (TILE_SIZE - 1)) + y < (int)image.size())
+                    {
+                        image.at((i * (TILE_SIZE - 1)) + x).at((j * (TILE_SIZE - 1)) + y) = list_tile[id][x][y];
+                    }
+                }
+            }
+        }
+    }*/
 
     // print_vector2D(image);
 
+    // Vector vers Mat
+    cv::Mat recoveredMat = vectorToMat(image);
 
+    // Recréer une image couleur à partir de la matrice d'entiers
+    cv::Mat reconstructedImage = intMatrixToImage(image);
 
-    // // // Vector vers Mat
-    // cv::Mat recoveredMat = vectorToMat(image);
-
-    // // Recréer une image couleur à partir de la matrice d'entiers
-    // cv::Mat reconstructedImage = intMatrixToImage(image);
-
-    // // Sauvegarde
-    // cv::imwrite("reconstructed.png", reconstructedImage);
-
-
+    // Sauvegarde
+    cv::imwrite("reconstructed.png", reconstructedImage);
 
     return EXIT_SUCCESS;
 }
