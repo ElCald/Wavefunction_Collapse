@@ -21,10 +21,10 @@
 
 using namespace std;
 
-#define TILE_SIZE 3 // Taille des tuiles
+#define TILE_SIZE 25 // Taille des tuiles
 
-#define IMAGE_WIDTH 128
-#define IMAGE_HEIGHT 128
+#define IMAGE_WIDTH 64
+#define IMAGE_HEIGHT 64
 
 #define GRILLE_SIZE_WIDTH ((int)(IMAGE_WIDTH / TILE_SIZE) + 1)
 #define GRILLE_SIZE_HEIGHT ((int)(IMAGE_HEIGHT / TILE_SIZE) + 1)
@@ -46,6 +46,7 @@ int tile_is_in_list(vector<Tile> &tiles, Tile &t);
 void save_tiles_from_grid_sample(vector<Tile> &tiles, vector<int> &num_tile, vector2D &grid_sample);
 dicoADJtiles compute_adjacency(const vector<Tile> &tiles);
 void entropy(Wave_grid &grille, const dicoADJtiles dicoADJ);
+void entropy_2(Wave_grid &grille, const dicoADJtiles dicoADJ);
 pair<int, int> find_lowest_entropy(const Wave_grid &grille);
 void print_tiles_list(vector<Tile> &tiles);
 void print_tiles_list(vector<Tile> &tiles, vector<int> &num_tile);
@@ -57,5 +58,6 @@ cv::Mat vectorToMat(const std::vector<std::vector<int>> &vec);
 std::vector<std::vector<int>> matToVector(const cv::Mat &mat);
 cv::Mat intMatrixToImage(const std::vector<std::vector<int>> &intMatrix);
 int rgbToInt(int r, int g, int b);
+void write_image_from_grille(const Wave_grid &grille, vector2D &image, const vector<Tile> &list_tile);
 
 #endif

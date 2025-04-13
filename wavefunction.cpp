@@ -221,6 +221,7 @@ pair<int, int> find_lowest_entropy(const Wave_grid &grille)
             }
         }
     }
+
     return result;
 }
 
@@ -231,8 +232,8 @@ pair<int, int> find_lowest_entropy(const Wave_grid &grille)
  * @param dicoADJ Dictionnaire des tuiles adjacentes
  *
  * @return True si une des cases est vide
- */
-void entropy(Wave_grid &grille, const dicoADJtiles dicoADJ)
+*/
+void entropy_2(Wave_grid &grille, const dicoADJtiles dicoADJ)
 {
 
     using Position = std::pair<int, int>;
@@ -244,95 +245,179 @@ void entropy(Wave_grid &grille, const dicoADJtiles dicoADJ)
     int width = grille[0].size(); // on suppose grille rectangulaire
 
     // Initialisation : on ajoute toutes les cases avec plus d’une tuile possible
-    for (int i = 0; i < height; i++)
-    {
-        for (int j = 0; j < width; j++)
-        {
-            if (grille[i][j].size() > 1)
-            {
+    for (int i = 0; i < height; i++){
+        for (int j = 0; j < width; j++){
+            if (grille[i][j].size() > 1){
                 propagationQueue.push({i, j});
                 dansLaFile.insert({i, j});
             }
         }
     }
 
-    while (!propagationQueue.empty())
-    {
-        auto [i, j] = propagationQueue.front();
+    while (!propagationQueue.empty()){ // tant qu'on a encore des case avec plus d'une tuile possible
+        auto [i, j] = propagationQueue.front(); // On récupère la première case dans la file
         propagationQueue.pop();
         dansLaFile.erase({i, j});
 
         std::set<int> tuilesASupprimer;
+        std::set<pair<int,int>> casesARemettre;
 
-        for (int tuile : grille[i][j])
-        {
+        for (int tuile : grille[i][j]){ // Pour toute les tuiles possibles de la case (i,j)
             bool estCompatible = true;
 
-            for (int dx = -1; dx <= 1; dx++)
-            {
-                for (int dy = -1; dy <= 1; dy++)
-                {
-                    if ((dx == 0 && dy == 0) ||
-                        i + dx < 0 || i + dx >= height ||
-                        j + dy < 0 || j + dy >= width)
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++){
+                    if ((dx == 0 && dy == 0) || i + dx < 0 || i + dx >= height || j + dy < 0 || j + dy >= width)
                         continue;
 
                     bool found = false;
 
-                    if (dicoADJ.at(tuile).count({dx, dy}))
-                    {
-                        for (int voisin : dicoADJ.at(tuile).at({dx, dy}))
-                        {
-                            if (grille[i + dx][j + dy].count(voisin))
-                            {
+                    if (dicoADJ.at(tuile).count({dx, dy})){ // On vérifie si la tuile peut avoir un voisin dans sa liste à la position (dx,dy)
+                        for (int voisin : dicoADJ.at(tuile).at({dx, dy})){ // Pour tous les voisins trouvés 
+                            if (grille[i + dx][j + dy].count(voisin)){ // On vérifie si dans la grille à la case voisine de notre tuile, il y a une tuile en commun avec la liste des voisins
                                 found = true;
                                 break;
                             }
                         }
                     }
 
-                    if (!found)
-                    {
+                    if (!found){ 
                         estCompatible = false;
                         break;
                     }
                 }
             }
 
-            if (!estCompatible)
-            {
+            if (!estCompatible){
                 tuilesASupprimer.insert(tuile);
+            }
+            else{// Si la tuile est compatible avec sa case, on  remet la case en jeu car elle pourrait être incompatible par la suite
+                casesARemettre.insert({i,j});
             }
         }
 
-        if (!tuilesASupprimer.empty())
-        {
-            for (int t : tuilesASupprimer)
-            {
+        
+
+        if (!tuilesASupprimer.empty()){
+            // Supression de toutes les tuiles imcompatibles
+            for (int t : tuilesASupprimer){
                 grille[i][j].erase(t);
             }
 
             // Propagation : on ajoute les voisins à la queue
-            for (int dx = -1; dx <= 1; dx++)
-            {
-                for (int dy = -1; dy <= 1; dy++)
-                {
-                    if ((dx == 0 && dy == 0) ||
-                        i + dx < 0 || i + dx >= height ||
-                        j + dy < 0 || j + dy >= width)
-                        continue;
+            // for (int dx = -1; dx <= 1; dx++){
+            //     for (int dy = -1; dy <= 1; dy++){
+            //         if ((dx == 0 && dy == 0) || i + dx < 0 || i + dx >= height || j + dy < 0 || j + dy >= width)
+            //             continue;
 
-                    Position voisin = {i + dx, j + dy};
-                    if (!dansLaFile.count(voisin))
-                    {
-                        propagationQueue.push(voisin);
-                        dansLaFile.insert(voisin);
-                    }
-                }
+            //         Position voisin = {i + dx, j + dy};
+            //         if (!dansLaFile.count(voisin)){
+            //             propagationQueue.push(voisin);
+            //             dansLaFile.insert(voisin);
+            //         }
+            //     }
+            // }
+        }
+
+        if (!casesARemettre.empty()){
+            // Supression de toutes les tuiles imcompatibles
+            for (auto [i,j] : casesARemettre){
+                propagationQueue.push({i, j});
+                dansLaFile.insert({i, j});
             }
         }
+
+
     }
 } // fin entropy
+ 
+
+
+
+ void entropy(Wave_grid &grille, const dicoADJtiles dicoADJ){
+
+    bool miseAjour;
+    bool found = false;
+
+    int real_x = 0;
+    int real_y = 0;
+
+
+    do{
+        miseAjour = false; 
+
+        // Parcours de la grille
+        for(int i=0; i<(int)grille.size(); i++){
+            for(int j=0; j<(int)grille.at(i).size(); j++){
+
+                if (grille.at(i).at(j).size() == 1) {
+                    // Dans le cas où la case de la grille possède déjà 1 seule tuile on n'a pas besoin de l'a traiter donc on skip la prochaine boucle for
+                    continue;
+                }
+
+         
+                // Parcours des tuiles possible pour une case (i,j) de la grille
+                for(int k : grille.at(i).at(j)){
+
+                    bool estCompatible = true; // variable qui dit si la tuile k est compatible avec ses voisines dans la grille
+
+                    for (int x = -1; x <= 1; x++) {
+                        for (int y = -1; y <= 1; y++) {
+
+                            // real_x = x*(TILE_SIZE-1);
+                            // real_y = y*(TILE_SIZE-1);
+
+                            real_x = x;
+                            real_y = y;
+
+                            if(( i+real_x < 0 || i+real_x >= (int)grille.size()) || (j+real_y < 0 || j+real_y >= (int)grille.size()) || (x == 0 && y == 0)){ // On vérifie si on sort de la grille
+                                continue;
+                            }
+
+
+                            found = false;
+                            
+                            // On cherche ici à savoir si à la case de la grille ([i+x],[j+y]), on trouve au moins un voisin de la tuile k qui se trouve en (i,j)  
+                            if(dicoADJ.at(k).count({x,y})){
+                                for(int a : dicoADJ.at(k).at({x,y})){
+
+                                    if( grille.at(i+real_x).at(j+real_y).count(a)){
+                                        found = true;
+                                    }
+                                }
+                            }
+                            
+                            
+                            if (!found) {
+                                estCompatible = false;
+                                // break;
+                            }
+                            
+                        }
+                    }
+
+                    // Si c'est pas possible de placer cette tuile à la case (i,j) alors on l'a retire de la case
+                    if (!estCompatible) {
+                        // printf("i: %d, j: %d, k: %d\n", i, j, k);
+
+                        if(grille.at(i).at(j).count(k)){
+                            grille.at(i).at(j).erase(k);
+                        }
+                        
+                        miseAjour = true;
+                        break;
+                    }
+                
+                } // for
+                
+
+            } // for grille j
+        } // for grille i
+
+    }while(miseAjour); // Si on met à jour une des cases de la grille, on recommence les calculs
+
+} // fin entropy
+
 
 /**
  * Affichage de toutes les tuiles enregistrées
@@ -498,4 +583,45 @@ cv::Mat intMatrixToImage(const std::vector<std::vector<int>> &intMatrix)
 int rgbToInt(int r, int g, int b)
 {
     return (r << 16) | (g << 8) | b;
+}
+
+
+
+// Reconstruction de l'image à partir d'une grille et stockage dans `image`
+void write_image_from_grille(const Wave_grid &grille, vector2D &image, const vector<Tile> &list_tile)
+{
+    for (int i = 0; i < (int)grille.size(); i++)
+    {
+        for (int j = 0; j < (int)grille.at(i).size(); j++)
+        {
+
+            int id = *grille[i][j].begin();
+            cout << id << " ";
+
+            for (int x = 0; x < TILE_SIZE; x++)
+            {
+                for (int y = 0; y < TILE_SIZE; y++)
+                {
+                    int img_x = (i * (TILE_SIZE - 1)) + x;
+                    int img_y = (j * (TILE_SIZE - 1)) + y;
+
+                    if (img_x >= 0 && img_x < (int)image.size() && img_y >= 0 && img_y < (int)image[0].size())
+                    {
+                        image[img_x][img_y] = list_tile[id][x][y];
+                    }
+                }
+            }
+        }
+
+        cout << endl;
+    }
+
+    for (int i = 0; i < (int)grille.size(); i++)
+    {
+        for (int j = 0; j < (int)grille.at(i).size(); j++)
+        {
+            int id = *grille[i][j].begin();
+            print_tile(list_tile.at(id));
+        }
+    }
 }

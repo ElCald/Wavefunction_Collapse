@@ -3,32 +3,7 @@
 
 using namespace std;
 
-// Reconstruction de l'image à partir d'une grille et stockage dans `image`
-void write_image_from_grille(const Wave_grid &grille, vector2D &image, const vector<Tile> &list_tile)
-{
-    for (int i = 0; i < (int)grille.size(); i++)
-    {
-        for (int j = 0; j < (int)grille[i].size(); j++)
-        {
 
-            int id = *grille[i][j].begin();
-
-            for (int x = 0; x < TILE_SIZE; x++)
-            {
-                for (int y = 0; y < TILE_SIZE; y++)
-                {
-                    int img_x = i * (TILE_SIZE - 1) + x;
-                    int img_y = j * (TILE_SIZE - 1) + y;
-
-                    if (img_x >= 0 && img_x < (int)image.size() && img_y >= 0 && img_y < (int)image[0].size())
-                    {
-                        image[img_x][img_y] = list_tile[id][x][y];
-                    }
-                }
-            }
-        }
-    }
-}
 
 int main(int argc, char *argv[])
 {
@@ -44,7 +19,7 @@ int main(int argc, char *argv[])
 
     // Chargement de l'image sample
 
-    cv::Mat img = cv::imread("template2.png", cv::IMREAD_COLOR);
+    cv::Mat img = cv::imread("template1.png", cv::IMREAD_COLOR);
 
     // Convertir RGB -> intMatrix (cv::Mat)
     cv::Mat intMat(img.rows, img.cols, CV_32SC1);
@@ -66,9 +41,9 @@ int main(int argc, char *argv[])
     dicoADJ = compute_adjacency(list_tile);
 
     // Affichage du dico
-    // for(int i=0; i<(int)list_tile.size(); i++){
-    //     print_dico(i, dicoADJ);
-    // }
+    for(int i=0; i<(int)list_tile.size(); i++){
+        print_dico(i, dicoADJ);
+    }
 
     // Initialisation de la grille
     // Wave_grid grille(GRILLE_SIZE_HEIGHT, vector<set<int>>(GRILLE_SIZE_WIDTH));
@@ -135,49 +110,57 @@ int main(int argc, char *argv[])
         }
     }
 
+
+    
+
     vector2D image(IMAGE_HEIGHT, vector<int>(IMAGE_WIDTH));
 
-#pragma omp parallel for collapse(3) shared(trouve, start_i, start_j, start_k, nb_tour, base, image) default(none) firstprivate(list_tile, dicoADJ) schedule(dynamic)
-    for (int i = 0; i < (int)GRILLE_SIZE_HEIGHT; i++)
+    #pragma omp parallel shared(trouve, start_i, start_j, start_k, nb_tour, base, image)  firstprivate(list_tile, dicoADJ)
     {
-        for (int j = 0; j < (int)GRILLE_SIZE_WIDTH; j++)
+        #pragma omp for collapse(3) schedule(dynamic)
+        for (int i = 0; i < (int)GRILLE_SIZE_HEIGHT; i++)
         {
-            for (int k = 0; k < (int)list_tile.size(); k++)
+            for (int j = 0; j < (int)GRILLE_SIZE_WIDTH; j++)
             {
-
-                if (trouve)
-                    continue;
-
-                Wave_grid grille = base;
-
-                grille[i][j].clear();
-                grille[i][j].insert(k);
-
-                entropy(grille, dicoADJ);
-
-                auto [x, y] = find_lowest_entropy(grille);
-
-                if (x == -1)
+                for (int k = 0; k < (int)list_tile.size(); k++)
                 {
-#pragma omp critical(image_write)
-                    {
-                        if (!trouve)
-                        {
-                            trouve = true;
-                            start_i = i;
-                            start_j = j;
-                            start_k = k;
+                    // #pragma omp atomic
+                    if (trouve)
+                        continue;
+                    
+                    
 
-                            write_image_from_grille(grille, image, list_tile);
+                    Wave_grid grille = base; // on fait une copie de la grille initiale
+
+                    grille[i][j].clear();
+                    grille[i][j].insert(k);
+
+                    entropy(grille, dicoADJ);
+
+                    auto [x, y] = find_lowest_entropy(grille);
+
+                    if (x == -1){
+                        #pragma omp critical
+                        {
+                            if (!trouve){
+                                trouve = true;
+                                start_i = i;
+                                start_j = j;
+                                start_k = k;
+
+                                write_image_from_grille(grille, image, list_tile);
+                            }else{
+                                #pragma omp atomic
+                                    nb_tour++;
+                            }
                         }
                     }
-                }
 
-#pragma omp atomic
-                nb_tour++;
+                }
             }
         }
-    }
+       
+    } //pragma parallel
 
     double t_apres = omp_get_wtime();
 
