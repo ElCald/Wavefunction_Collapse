@@ -86,9 +86,7 @@ void save_tiles_from_grid_sample(vector<Tile> &tiles, vector<int> &num_tile, con
                 num_tile.push_back(1);
             }
             else
-            {
                 ++num_tile[indice_tile];
-            }
         }
     }
 
@@ -130,10 +128,14 @@ dicoADJtiles compute_adjacency(const vector<Tile> &tiles)
                     continue;
                 }
 
+                // real_x = x*(TILE_SIZE-1);
+                // real_y = y*(TILE_SIZE-1);
+
                 real_x = x;
                 real_y = y;
 
-                // if((x>-(TILE_SIZE-1) && x<TILE_SIZE-1) && (y>-(TILE_SIZE-1) && y<TILE_SIZE-1)){
+                // if ((x > -(TILE_SIZE - 1) && x < TILE_SIZE - 1) && (y > -(TILE_SIZE - 1) && y < TILE_SIZE - 1))
+                // {
                 //     continue;
                 // }
 

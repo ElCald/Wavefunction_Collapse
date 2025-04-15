@@ -167,6 +167,12 @@ int main(int argc, char *argv[])
 
             int id = *grille[i][j].begin();
             cout << id << " ";
+
+            // Recréer une image couleur à partir de la matrice d'entiers
+            cv::Mat reconstructedImage = intMatrixToImage(list_tile.at(id));
+
+            // Sauvegarde
+            cv::imwrite("reconstructed" + std::to_string(id) + ".png", reconstructedImage);
         }
         cout << endl;
     }
@@ -176,31 +182,7 @@ int main(int argc, char *argv[])
     cout << "nb tour: " << nb_tour << endl;
     printf("Algo resolu en : %f seconds\n", t_apres - t_avant);
 
-    // Affichage de la grille finale
-    /*for (int i = 0; i < (int)grille.size(); i++)
-    {
-        for (int j = 0; j < (int)grille.at(i).size(); j++)
-        {
-
-            int id = *grille[i][j].begin();
-
-            for (int x = 0; x < TILE_SIZE; x++)
-            {
-                for (int y = 0; y < TILE_SIZE; y++)
-                {
-                    if ((i * (TILE_SIZE - 1)) + x >= 0 && (i * (TILE_SIZE - 1)) + x < (int)image.size() && (j * (TILE_SIZE - 1)) + y >= 0 && (j * (TILE_SIZE - 1)) + y < (int)image.size())
-                    {
-                        image.at((i * (TILE_SIZE - 1)) + x).at((j * (TILE_SIZE - 1)) + y) = list_tile[id][x][y];
-                    }
-                }
-            }
-        }
-    }*/
-
     // print_vector2D(image);
-
-    // Vector vers Mat
-    cv::Mat recoveredMat = vectorToMat(image);
 
     // Recréer une image couleur à partir de la matrice d'entiers
     cv::Mat reconstructedImage = intMatrixToImage(image);
