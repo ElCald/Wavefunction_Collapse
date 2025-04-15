@@ -67,6 +67,7 @@ public:
     Cell *heuristicPick();
     Cell *getCell(int x, int y);
     void collapse(mt19937 &rng);
+    bool is_ready();
 };
 
 // Charge une image avec OpenCV et la redimensionne

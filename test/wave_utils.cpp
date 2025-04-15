@@ -95,17 +95,15 @@ Cell *Grid::heuristicPick()
     if (uncollapsed.empty())
         return nullptr;
 
-    sort(uncollapsed.begin(), uncollapsed.end(),
-         [](const Cell *a, const Cell *b)
-         {
-             return a->entropy() < b->entropy();
-         });
+    sort(uncollapsed.begin(), uncollapsed.end(), [](const Cell *a, const Cell *b){
+        return a->entropy() < b->entropy();
+    });
 
     int minEntropy = uncollapsed.front()->entropy();
     vector<Cell *> lowestEntropy;
-    copy_if(uncollapsed.begin(), uncollapsed.end(), back_inserter(lowestEntropy),
-            [minEntropy](Cell *c)
-            { return c->entropy() == minEntropy; });
+    copy_if(uncollapsed.begin(), uncollapsed.end(), back_inserter(lowestEntropy), [minEntropy](Cell *c){ 
+        return c->entropy() == minEntropy; 
+    });
 
     random_device rd;
     mt19937 rng(rd());
@@ -212,6 +210,20 @@ void Grid::collapse(std::mt19937 &gen)
         chosen->options = {selected};
     }
 }
+
+
+bool Grid::is_ready(){
+
+    for(size_t i=0; i<cells.size(); i++){
+        for(size_t j=0; j<cells.at(i).size(); j++){
+            if(!cells.at(i).at(j).collapsed){
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 
 Mat loadAndResizeImage(const string &path, int size)
 {
