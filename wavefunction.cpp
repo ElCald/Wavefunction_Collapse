@@ -41,27 +41,16 @@ using namespace std;
  *
  * @return L'indice de la position de la tuile dans la liste sinon -1
  */
-int tile_is_in_list(vector<Tile> &tiles, Tile &t)
+int tile_is_in_list(const vector<Tile> &tiles, const Tile &t)
 {
-
-    bool res = false;
-    int i = 0;
-
-    for (Tile tile : tiles)
+    for (size_t i = 0; i < tiles.size(); ++i)
     {
-
-        if (tile == t)
+        if (tiles[i] == t)
         {
-            res = true;
-            break;
+            return static_cast<int>(i);
         }
-        i++;
     }
-
-    if (res)
-        return i;
-    else
-        return -1;
+    return -1;
 }
 
 /**
@@ -70,40 +59,40 @@ int tile_is_in_list(vector<Tile> &tiles, Tile &t)
  * @param tiles Liste qui contiendra les tuiles de la grille
  * @param grid_sample Grille de
  */
-void save_tiles_from_grid_sample(vector<Tile> &tiles, vector<int> &num_tile, vector2D &grid_sample)
+void save_tiles_from_grid_sample(vector<Tile> &tiles, vector<int> &num_tile, const vector2D &grid_sample)
 {
-    int indice_tile;
+    const size_t rows = grid_sample.size();
+    const size_t cols = grid_sample[0].size();
 
-    // Parcours de la grille
-    for (size_t i = 0; i < grid_sample.size() - TILE_SIZE + 1; i++)
+    for (size_t i = 0; i <= rows - TILE_SIZE; ++i)
     {
-        for (size_t j = 0; j < grid_sample.at(i).size() - TILE_SIZE + 1; j++)
+        for (size_t j = 0; j <= cols - TILE_SIZE; ++j)
         {
-
+            // Extraction d'une tuile TILE_SIZE x TILE_SIZE
             Tile tile(TILE_SIZE, vector<int>(TILE_SIZE));
-
-            for (int k = 0; k < TILE_SIZE; k++)
+            for (int k = 0; k < TILE_SIZE; ++k)
             {
-                for (int l = 0; l < TILE_SIZE; l++)
+                for (int l = 0; l < TILE_SIZE; ++l)
                 {
-                    tile[k][l] = grid_sample.at(i + k).at(j + l);
+                    tile[k][l] = grid_sample[i + k][j + l];
                 }
             }
 
-            // On vérifie si la tuile existe déjà, ce qui nous permet de compter le nombre qu'on en trouve dans le sample
-            if ((indice_tile = tile_is_in_list(tiles, tile)) == -1)
+            // Vérifie si la tuile est déjà présente
+            int indice_tile = tile_is_in_list(tiles, tile);
+            if (indice_tile == -1)
             {
-                tiles.push_back(tile);
+                tiles.push_back(std::move(tile)); // move utile ici
                 num_tile.push_back(1);
             }
             else
             {
-                num_tile.at(indice_tile) += 1;
+                ++num_tile[indice_tile];
             }
         }
     }
 
-    /* À voir pour save les symétries et les rotations */
+    // TODO: Ajouter symétries / rotations si besoin
 }
 
 /**
@@ -141,8 +130,8 @@ dicoADJtiles compute_adjacency(const vector<Tile> &tiles)
                     continue;
                 }
 
-                real_x = x * (TILE_SIZE - 1);
-                real_y = y * (TILE_SIZE - 1);
+                real_x = x;
+                real_y = y;
 
                 // if((x>-(TILE_SIZE-1) && x<TILE_SIZE-1) && (y>-(TILE_SIZE-1) && y<TILE_SIZE-1)){
                 //     continue;
@@ -202,22 +191,22 @@ dicoADJtiles compute_adjacency(const vector<Tile> &tiles)
  */
 pair<int, int> find_lowest_entropy(const Wave_grid &grille)
 {
-
     int minChoices = INT_MAX;
-
     pair<int, int> result = {-1, -1};
 
-    for (size_t i = 0; i < grille.size(); i++)
+    const size_t rows = grille.size();
+    const size_t cols = grille[0].size();
+
+    for (size_t i = 0; i < rows; ++i)
     {
-        for (size_t j = 0; j < grille[i].size(); j++)
+        for (size_t j = 0; j < cols; ++j)
         {
+            size_t options = grille[i][j].size();
 
-            int options = grille[i][j].size();
-
-            if (options > 1 && options < minChoices)
+            if (options > 1 && static_cast<int>(options) < minChoices)
             {
-                minChoices = options;
-                result = {i, j};
+                minChoices = static_cast<int>(options);
+                result = {static_cast<int>(i), static_cast<int>(j)};
             }
         }
     }
@@ -225,116 +214,8 @@ pair<int, int> find_lowest_entropy(const Wave_grid &grille)
     return result;
 }
 
-/**
- * Calcul de l'entropie avec propagation locale
- *
- * @param grille
- * @param dicoADJ Dictionnaire des tuiles adjacentes
- *
- * @return True si une des cases est vide
-*/
-void entropy_2(Wave_grid &grille, const dicoADJtiles dicoADJ)
+bool entropy(Wave_grid &grille, const dicoADJtiles dicoADJ)
 {
-
-    using Position = std::pair<int, int>;
-
-    std::queue<Position> propagationQueue;
-    std::set<Position> dansLaFile;
-
-    int height = grille.size();
-    int width = grille[0].size(); // on suppose grille rectangulaire
-
-    // Initialisation : on ajoute toutes les cases avec plus d’une tuile possible
-    for (int i = 0; i < height; i++){
-        for (int j = 0; j < width; j++){
-            if (grille[i][j].size() > 1){
-                propagationQueue.push({i, j});
-                dansLaFile.insert({i, j});
-            }
-        }
-    }
-
-    while (!propagationQueue.empty()){ // tant qu'on a encore des case avec plus d'une tuile possible
-        auto [i, j] = propagationQueue.front(); // On récupère la première case dans la file
-        propagationQueue.pop();
-        dansLaFile.erase({i, j});
-
-        std::set<int> tuilesASupprimer;
-        std::set<pair<int,int>> casesARemettre;
-
-        for (int tuile : grille[i][j]){ // Pour toute les tuiles possibles de la case (i,j)
-            bool estCompatible = true;
-
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dy = -1; dy <= 1; dy++){
-                    if ((dx == 0 && dy == 0) || i + dx < 0 || i + dx >= height || j + dy < 0 || j + dy >= width)
-                        continue;
-
-                    bool found = false;
-
-                    if (dicoADJ.at(tuile).count({dx, dy})){ // On vérifie si la tuile peut avoir un voisin dans sa liste à la position (dx,dy)
-                        for (int voisin : dicoADJ.at(tuile).at({dx, dy})){ // Pour tous les voisins trouvés 
-                            if (grille[i + dx][j + dy].count(voisin)){ // On vérifie si dans la grille à la case voisine de notre tuile, il y a une tuile en commun avec la liste des voisins
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!found){ 
-                        estCompatible = false;
-                        break;
-                    }
-                }
-            }
-
-            if (!estCompatible){
-                tuilesASupprimer.insert(tuile);
-            }
-            else{// Si la tuile est compatible avec sa case, on  remet la case en jeu car elle pourrait être incompatible par la suite
-                casesARemettre.insert({i,j});
-            }
-        }
-
-        
-
-        if (!tuilesASupprimer.empty()){
-            // Supression de toutes les tuiles imcompatibles
-            for (int t : tuilesASupprimer){
-                grille[i][j].erase(t);
-            }
-
-            // Propagation : on ajoute les voisins à la queue
-            // for (int dx = -1; dx <= 1; dx++){
-            //     for (int dy = -1; dy <= 1; dy++){
-            //         if ((dx == 0 && dy == 0) || i + dx < 0 || i + dx >= height || j + dy < 0 || j + dy >= width)
-            //             continue;
-
-            //         Position voisin = {i + dx, j + dy};
-            //         if (!dansLaFile.count(voisin)){
-            //             propagationQueue.push(voisin);
-            //             dansLaFile.insert(voisin);
-            //         }
-            //     }
-            // }
-        }
-
-        if (!casesARemettre.empty()){
-            // Supression de toutes les tuiles imcompatibles
-            for (auto [i,j] : casesARemettre){
-                propagationQueue.push({i, j});
-                dansLaFile.insert({i, j});
-            }
-        }
-
-
-    }
-} // fin entropy
- 
-
-
-
- void entropy(Wave_grid &grille, const dicoADJtiles dicoADJ){
 
     bool miseAjour;
     bool found = false;
@@ -342,27 +223,32 @@ void entropy_2(Wave_grid &grille, const dicoADJtiles dicoADJ)
     int real_x = 0;
     int real_y = 0;
 
-
-    do{
-        miseAjour = false; 
+    do
+    {
+        miseAjour = false;
 
         // Parcours de la grille
-        for(int i=0; i<(int)grille.size(); i++){
-            for(int j=0; j<(int)grille.at(i).size(); j++){
+        for (int i = 0; i < (int)grille.size(); i++)
+        {
+            for (int j = 0; j < (int)grille.at(i).size(); j++)
+            {
 
-                if (grille.at(i).at(j).size() == 1) {
+                if (grille.at(i).at(j).size() == 1)
+                {
                     // Dans le cas où la case de la grille possède déjà 1 seule tuile on n'a pas besoin de l'a traiter donc on skip la prochaine boucle for
                     continue;
                 }
 
-         
                 // Parcours des tuiles possible pour une case (i,j) de la grille
-                for(int k : grille.at(i).at(j)){
+                for (int k : grille.at(i).at(j))
+                {
 
                     bool estCompatible = true; // variable qui dit si la tuile k est compatible avec ses voisines dans la grille
 
-                    for (int x = -1; x <= 1; x++) {
-                        for (int y = -1; y <= 1; y++) {
+                    for (int x = -1; x <= 1; x++)
+                    {
+                        for (int y = -1; y <= 1; y++)
+                        {
 
                             // real_x = x*(TILE_SIZE-1);
                             // real_y = y*(TILE_SIZE-1);
@@ -370,54 +256,59 @@ void entropy_2(Wave_grid &grille, const dicoADJtiles dicoADJ)
                             real_x = x;
                             real_y = y;
 
-                            if(( i+real_x < 0 || i+real_x >= (int)grille.size()) || (j+real_y < 0 || j+real_y >= (int)grille.size()) || (x == 0 && y == 0)){ // On vérifie si on sort de la grille
+                            if ((i + real_x < 0 || i + real_x >= (int)grille.size()) || (j + real_y < 0 || j + real_y >= (int)grille.size()) || (x == 0 && y == 0))
+                            { // On vérifie si on sort de la grille
                                 continue;
                             }
 
-
                             found = false;
-                            
-                            // On cherche ici à savoir si à la case de la grille ([i+x],[j+y]), on trouve au moins un voisin de la tuile k qui se trouve en (i,j)  
-                            if(dicoADJ.at(k).count({x,y})){
-                                for(int a : dicoADJ.at(k).at({x,y})){
 
-                                    if( grille.at(i+real_x).at(j+real_y).count(a)){
+                            // On cherche ici à savoir si à la case de la grille ([i+x],[j+y]), on trouve au moins un voisin de la tuile k qui se trouve en (i,j)
+                            if (dicoADJ.at(k).count({x, y}))
+                            {
+                                for (int a : dicoADJ.at(k).at({x, y}))
+                                {
+
+                                    if (grille.at(i + real_x).at(j + real_y).count(a))
+                                    {
                                         found = true;
                                     }
                                 }
                             }
-                            
-                            
-                            if (!found) {
+
+                            if (!found)
+                            {
                                 estCompatible = false;
                                 // break;
                             }
-                            
                         }
                     }
 
                     // Si c'est pas possible de placer cette tuile à la case (i,j) alors on l'a retire de la case
-                    if (!estCompatible) {
+                    if (!estCompatible)
+                    {
                         // printf("i: %d, j: %d, k: %d\n", i, j, k);
 
-                        if(grille.at(i).at(j).count(k)){
+                        if (grille.at(i).at(j).count(k))
+                        {
                             grille.at(i).at(j).erase(k);
                         }
-                        
+
                         miseAjour = true;
                         break;
                     }
-                
+
                 } // for
-                
 
             } // for grille j
         } // for grille i
 
-    }while(miseAjour); // Si on met à jour une des cases de la grille, on recommence les calculs
+    } while (miseAjour); // Renvoie vrai si au moins une case a été modifiée
+    // Si on met à jour une des cases de la grille, on recommence les calculs
+
+    return miseAjour;
 
 } // fin entropy
-
 
 /**
  * Affichage de toutes les tuiles enregistrées
@@ -585,8 +476,6 @@ int rgbToInt(int r, int g, int b)
     return (r << 16) | (g << 8) | b;
 }
 
-
-
 // Reconstruction de l'image à partir d'une grille et stockage dans `image`
 void write_image_from_grille(const Wave_grid &grille, vector2D &image, const vector<Tile> &list_tile)
 {
@@ -596,7 +485,7 @@ void write_image_from_grille(const Wave_grid &grille, vector2D &image, const vec
         {
 
             int id = *grille[i][j].begin();
-            cout << id << " ";
+            // cout << id << " ";
 
             for (int x = 0; x < TILE_SIZE; x++)
             {
@@ -613,15 +502,36 @@ void write_image_from_grille(const Wave_grid &grille, vector2D &image, const vec
             }
         }
 
-        cout << endl;
+        // cout << endl;
     }
 
-    for (int i = 0; i < (int)grille.size(); i++)
+    /*for (int i = 0; i < (int)grille.size(); i++)
     {
         for (int j = 0; j < (int)grille.at(i).size(); j++)
         {
             int id = *grille[i][j].begin();
             print_tile(list_tile.at(id));
         }
+    }*/
+}
+
+bool propagate(Wave_grid &grille, const dicoADJtiles &dicoADJ)
+{
+    bool changed = true;
+    while (changed)
+    {
+        changed = entropy(grille, dicoADJ);
     }
+
+    // Vérifie si la grille est complètement résolue (chaque case a une seule possibilité)
+    for (const auto &row : grille)
+    {
+        for (const auto &cell : row)
+        {
+            if (cell.size() != 1)
+                return false;
+        }
+    }
+
+    return true; // propagation complète et grille résolue
 }

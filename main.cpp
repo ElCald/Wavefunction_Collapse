@@ -3,8 +3,6 @@
 
 using namespace std;
 
-
-
 int main(int argc, char *argv[])
 {
 
@@ -41,9 +39,9 @@ int main(int argc, char *argv[])
     dicoADJ = compute_adjacency(list_tile);
 
     // Affichage du dico
-    for(int i=0; i<(int)list_tile.size(); i++){
-        print_dico(i, dicoADJ);
-    }
+    // for(int i=0; i<(int)list_tile.size(); i++){
+    // print_dico(i, dicoADJ);
+    //}
 
     // Initialisation de la grille
     // Wave_grid grille(GRILLE_SIZE_HEIGHT, vector<set<int>>(GRILLE_SIZE_WIDTH));
@@ -96,8 +94,6 @@ int main(int argc, char *argv[])
     bool trouve = false;
     int start_i = -1, start_j = -1, start_k = -1;
 
-    double t_avant = omp_get_wtime();
-
     Wave_grid base(GRILLE_SIZE_HEIGHT, vector<set<int>>(GRILLE_SIZE_WIDTH));
     for (int a = 0; a < GRILLE_SIZE_HEIGHT; a++)
     {
@@ -110,59 +106,70 @@ int main(int argc, char *argv[])
         }
     }
 
-
-    
-
     vector2D image(IMAGE_HEIGHT, vector<int>(IMAGE_WIDTH));
 
-    #pragma omp parallel shared(trouve, start_i, start_j, start_k, nb_tour, base, image)  firstprivate(list_tile, dicoADJ)
+    Wave_grid grille;
+
+    double t_avant = omp_get_wtime();
+
+#pragma omp parallel shared(trouve, start_i, start_j, start_k, nb_tour, base, image) firstprivate(list_tile, dicoADJ)
     {
-        #pragma omp for collapse(3) schedule(dynamic)
+#pragma omp for collapse(3) schedule(dynamic)
         for (int i = 0; i < (int)GRILLE_SIZE_HEIGHT; i++)
         {
             for (int j = 0; j < (int)GRILLE_SIZE_WIDTH; j++)
             {
                 for (int k = 0; k < (int)list_tile.size(); k++)
                 {
-                    // #pragma omp atomic
                     if (trouve)
                         continue;
-                    
-                    
 
-                    Wave_grid grille = base; // on fait une copie de la grille initiale
-
+                    grille = base; // copie indépendante de la grille
                     grille[i][j].clear();
                     grille[i][j].insert(k);
 
                     entropy(grille, dicoADJ);
 
-                    auto [x, y] = find_lowest_entropy(grille);
+                    if (propagate(grille, dicoADJ))
+                    {
+                        // La grille est complètement résolue, on peut construire l’image
+                        vector2D local_image(IMAGE_HEIGHT, vector<int>(IMAGE_WIDTH));
+                        write_image_from_grille(grille, local_image, list_tile);
 
-                    if (x == -1){
-                        #pragma omp critical
+#pragma omp critical
                         {
-                            if (!trouve){
+                            if (!trouve)
+                            {
                                 trouve = true;
                                 start_i = i;
                                 start_j = j;
                                 start_k = k;
-
-                                write_image_from_grille(grille, image, list_tile);
-                            }else{
-                                #pragma omp atomic
-                                    nb_tour++;
+                                image = local_image; // écriture protégée
+                            }
+                            else
+                            {
+#pragma omp atomic
+                                nb_tour++;
                             }
                         }
                     }
-
                 }
             }
         }
-       
-    } //pragma parallel
+    }
 
     double t_apres = omp_get_wtime();
+
+    for (int i = 0; i < (int)grille.size(); i++)
+    {
+        for (int j = 0; j < (int)grille.at(i).size(); j++)
+        {
+
+            int id = *grille[i][j].begin();
+            cout << id << " ";
+        }
+        cout << endl;
+    }
 
     cout << "Trouvé: " << trouve << endl;
     printf("start i: %d, j: %d, k: %d\n", start_i, start_j, start_k);
