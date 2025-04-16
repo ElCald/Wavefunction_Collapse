@@ -19,11 +19,9 @@ void Tile::setRules(const vector<Tile *> &allTiles)
     }
 }
 
-void Tile::draw(Mat &canvas, int x, int y, int size) const
+void Tile::draw(Image_int &canvas, int x, int y, int size) const
 {
-    Mat resized;
-    resize(image, resized, Size(size, size));
-    resized.copyTo(canvas(Rect(x, y, size, size)));
+   // Mise de la tuile dans l'image finale
 }
 
 int Cell::entropy() const
@@ -31,7 +29,7 @@ int Cell::entropy() const
     return static_cast<int>(options.size());
 }
 
-void Cell::draw(Mat &canvas, int tileSize) const
+void Cell::draw(Image_int &canvas, int tileSize) const
 {
     if (collapsed && !options.empty())
     {
@@ -54,7 +52,7 @@ void Cell::update()
     collapsed = (options.size() == 1);
 }
 
-void Grid::draw(Mat &canvas)
+void Grid::draw(Image_int &canvas)
 {
     for (auto &row : cells)
     {
@@ -166,7 +164,6 @@ void Grid::collapse(std::mt19937 &gen)
 
     std::uniform_int_distribution<> dist(0, candidates.size() - 1);
     Cell *chosen = candidates[dist(gen)];
-    // Cell *chosen = candidates[0];
 
     // 5. Appliquer la contrainte des voisins
     int x = chosen->x;
@@ -217,7 +214,6 @@ void Grid::collapse(std::mt19937 &gen)
     {
         std::uniform_int_distribution<> tileDist(0, cumulative.size() - 1);
         Tile *selected = cumulative[tileDist(gen)];
-        // Tile *selected = cumulative[1];
         chosen->collapsed = true;
         chosen->options = {selected};
     }
@@ -237,25 +233,30 @@ bool Grid::is_ready(){
 }
 
 
-Mat loadAndResizeImage(const string &path, int size)
-{
-    Mat img = imread(path, IMREAD_UNCHANGED);
-    if (img.empty())
-    {
-        cerr << "Erreur de chargement : " << path << endl;
-        exit(EXIT_FAILURE);
-    }
-    resize(img, img, Size(size, size));
-    return img;
-}
-
 vector<Tile *> loadTiles(const vector<string> &assetPaths, const vector<vector<int>> &edgeData, int tileSize)
 {
     vector<Tile *> tiles;
     for (size_t i = 0; i < assetPaths.size(); ++i)
     {
-        Mat img = loadAndResizeImage(assetPaths[i], tileSize);
-        tiles.push_back(new Tile(img, static_cast<int>(i), edgeData[i]));
+        tiles.push_back(new Tile(static_cast<int>(i), edgeData[i]));
+    }
+
+    // Définir les règles de compatibilité pour chaque tuile
+    for (auto &tile : tiles)
+    {
+        tile->setRules(tiles);
+    }
+
+    return tiles;
+}
+
+
+vector<Tile *> loadTiles(const int num_tiles, const vector<vector<int>> &edgeData, int tileSize)
+{
+    vector<Tile *> tiles;
+    for (int i = 0; i < num_tiles; ++i)
+    {
+        tiles.push_back(new Tile(static_cast<int>(i), edgeData[i]));
     }
 
     // Définir les règles de compatibilité pour chaque tuile
@@ -303,4 +304,236 @@ std::pair<int, int> damier_coords(int k, int cols) {
     }
 
     return {row, col};
+}
+
+
+
+/**
+ * Extraction des tuiles qui se trouvent dans le sample initiale en input
+ *
+ * @param tiles Liste qui contiendra les tuiles de la grille
+ * @param grid_sample Grille de
+ */
+void save_tiles_from_grid_sample(vector<vector<vector<int>>> &tiles, vector<int> &num_tile, const vector<vector<int>> &grid_sample, int tile_size)
+{
+    const size_t rows = grid_sample.size();
+    const size_t cols = grid_sample[0].size();
+
+    for (size_t i = 0; i <= rows - tile_size; i+=tile_size-1)
+    {
+        for (size_t j = 0; j <= cols - tile_size; j+=tile_size-1)
+        {
+            // Extraction d'une tuile TILE_SIZE x TILE_SIZE
+            vector<vector<int>> tile(tile_size, vector<int>(tile_size));
+
+            for (int k = 0; k < tile_size; ++k)
+            {
+                for (int l = 0; l < tile_size; ++l)
+                {
+                    tile[k][l] = grid_sample[i + k][j + l];
+                }
+            }
+
+            // Vérifie si la tuile est déjà présente
+            int indice_tile = tile_is_in_list(tiles, tile);
+            if (indice_tile == -1)
+            {
+                tiles.push_back(tile); // move utile ici
+                num_tile.push_back(1);
+            }
+            else
+                ++num_tile[indice_tile];
+        }
+    }
+}
+
+
+
+/**
+ * Permet de savoir si une tuile se trouve dans notre liste
+ *
+ * @param tiles Liste de tuiles
+ * @param t Tuile a tester
+ *
+ * @return L'indice de la position de la tuile dans la liste sinon -1
+ */
+int tile_is_in_list(const vector<vector<vector<int>>> &tiles, const vector<vector<int>> &t)
+{
+    for (size_t i = 0; i < tiles.size(); ++i)
+    {
+        if (tiles[i] == t)
+        {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+
+
+/**
+ * Affichage de toutes les tuiles enregistrées avec leur nombre
+ *
+ * @param tiles
+ */
+void print_tiles_list(vector<vector<vector<int>>> &tiles, int tile_size)
+{
+    int k = 0;
+
+    for (vector<vector<int>> &tile : tiles)
+    {
+
+        cout << "Tile: " << k << endl;
+
+        print_tile(tile, tile_size);
+
+        k++;
+
+        cout << endl;
+    }
+}
+
+/**
+ * Affichage d'une tuile
+ *
+ * @param tile
+ */
+void print_tile(const vector<vector<int>> tile, int tile_size)
+{
+
+    for (int i = 0; i < tile_size; i++)
+    {
+        for (int j = 0; j < tile_size; j++)
+        {
+            cout << tile.at(i).at(j) << " ";
+        }
+        cout << endl;
+    }
+    cout << endl;
+}
+
+
+int find_bord_in_list(vector<vector<int>>& bords, vector<int>& e){
+
+    for(size_t i=0; i<bords.size(); i++){
+
+        if(bords.at(i) == e){
+            return i;
+        }
+
+    }
+
+    return -1;
+}
+
+
+
+/**
+ * @param liste_tuiles
+ * @param edges 
+ * @param tile_size
+ */
+void generate_edges(vector<vector<vector<int>>>& liste_tuiles, vector<vector<int>>& edges, int tile_size){
+
+    vector<vector<int>> bords;
+    vector<int> bord(tile_size);
+    vector<int> edge;
+    int k=0;
+    int indice=0;
+
+    for(size_t i=0; i<liste_tuiles.size(); i++){ // parcours de la liste de tuile
+
+        edge.clear();
+
+
+
+        // ---- bord haut ----
+        bord.clear();
+        bord.resize(tile_size);
+        k=0;
+        for(int j=0; j<tile_size; j++){ 
+            bord.at(k) = liste_tuiles.at(i).at(0).at(j);
+            k++;
+        }
+
+        if(find_bord_in_list(bords, bord) == -1){
+            bords.push_back(bord);
+        }
+
+        indice = find_bord_in_list(bords, bord);
+        edge.push_back(indice);
+
+
+        // ---- bord droite ----
+        bord.clear();
+        bord.resize(tile_size);
+        k=0;
+        for(int j=0; j<tile_size; j++){ 
+            bord.at(k) = liste_tuiles.at(i).at(j).at(tile_size-1);
+            k++;
+        }
+
+        if(find_bord_in_list(bords, bord) == -1){
+            bords.push_back(bord);
+        }
+
+        indice = find_bord_in_list(bords, bord);
+        edge.push_back(indice);
+        
+
+        
+        // ---- bord bas ----
+        bord.clear();
+        bord.resize(tile_size);
+        k=0;
+        for(int j=0; j<tile_size; j++){ 
+            bord.at(k) = liste_tuiles.at(i).at(tile_size-1).at(j);
+            k++;
+        }
+
+        if(find_bord_in_list(bords, bord) == -1){
+            bords.push_back(bord);
+        }
+
+        indice = find_bord_in_list(bords, bord);
+        edge.push_back(indice);
+ 
+
+
+        // ---- bord gauche ----
+        bord.clear();
+        bord.resize(tile_size);
+        k=0;
+        for(int j=0; j<tile_size; j++){ 
+            bord.at(k) = liste_tuiles.at(i).at(j).at(0);
+            k++;
+        }
+
+        if(find_bord_in_list(bords, bord) == -1){
+            bords.push_back(bord);
+        }
+
+        indice = find_bord_in_list(bords, bord);
+        edge.push_back(indice);
+     
+
+  
+   
+
+        // fin
+        edges.push_back(edge);
+    }
+
+}
+
+
+
+void print_edges(vector<vector<int>>& edges){
+    for(size_t i=0; i<edges.size(); i++){
+        cout << "Tile: " << i << " >> ";
+        for(size_t j=0; j<edges.at(i).size(); j++){
+            cout << edges.at(i).at(j) << " ";
+        }
+        cout << endl;
+    }
 }

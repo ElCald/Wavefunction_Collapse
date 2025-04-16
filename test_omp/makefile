@@ -3,7 +3,7 @@
 # Author makefile : Cyril Rabat
 #
 
-EXEC = test
+EXEC = test2
 OBJECTS = wave_utils.o
 PROJECT_NAME = WaveCollapse
 

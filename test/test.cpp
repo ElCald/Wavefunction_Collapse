@@ -19,6 +19,8 @@ int main(int argc, char *argv[])
         // "templates/8.png",
         // "templates/9.png",
         // "templates/10.png"
+        "templates/11.png",
+        "templates/12.png",
     };
 
     // Chaque tuile a des arêtes représentées par 4 entiers : [top, right, bottom, left]
@@ -34,14 +36,16 @@ int main(int argc, char *argv[])
         // {1, 0, 0, 1}, // 8
         // {1, 0, 1, 0}, // 9
         // {0, 1, 0, 1} // 10
+        {0, 2, 0, 1}, // 11
+        {0, 1, 0, 2}, // 12
     };
 
     int tileSize = 100;
 
     vector<Tile *> tiles = loadTiles(paths, edges, tileSize);
 
-    int canvasWidth = 900;
-    int canvasHeight = 800;
+    int canvasWidth = 500;
+    int canvasHeight = 500;
     Mat canvas(canvasHeight, canvasWidth, CV_8UC3, Scalar(0, 0, 0));
 
     // Initialise la grille
@@ -72,6 +76,18 @@ int main(int argc, char *argv[])
     }while(onContinue);
 
     double t_apres = omp_get_wtime();
+
+    for(int i=0; i<grid.rows; i++){
+        for(int j=0; j<grid.cols; j++){
+            if(grid.getCell(i,j)->collapsed){
+                cout << grid.getCell(j,i)->options.at(0)->index << " ";
+            }
+            else{
+                cout << "A "; 
+            }
+        }
+        cout << endl;
+    }
 
 
 

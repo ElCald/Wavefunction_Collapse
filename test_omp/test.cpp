@@ -64,13 +64,14 @@ int main(int argc, char *argv[])
     bool onContinue = true;
     string result;
 
-    int n = 5, d = 3;
+    int n = 5, d = 5;
     int rows = pow(n, d);
     int* data = generateTasks(n, d);
 
     #pragma omp parallel 
     {
-        #pragma omp for schedule(static)
+
+        #pragma omp for schedule(dynamic)
         for (int i = 0; i < rows; ++i) {
 
             // init grid
@@ -92,12 +93,12 @@ int main(int argc, char *argv[])
             bool onContinue_local = true;
 
             do{
+
                 Grid grid3(canvasWidth, canvasHeight, tileSize, tiles);
-        
                 grid3 = grid2;
-        
+
                 // Algorithme WFC principal
-                for (int k = 0; k < grid3.cols * grid3.rows; ++k)
+                for (int k = 0; k < grid2.cols * grid2.rows; ++k)
                 {
                     grid3.collapse(rng);
                 }
@@ -110,24 +111,28 @@ int main(int argc, char *argv[])
                         if(onContinue){
                             grid = grid3;
                             cout << omp_get_thread_num() << " à terminé avec la tache : " << i << endl;
-                            result = "output" + to_string(i) + ".png";  
+                    
                             t_apres = omp_get_wtime();
 
+                            cout << "Image trouvée en : " << t_apres - t_avant << "sec." << endl;        
+
+                            result = "output" + to_string(i) + ".png";  
                             grid.draw(canvas);
-                            imwrite(result, canvas);
-                        
-                            cout << "Image sauvegardée dans output.png en : " << t_apres - t_avant << "sec." << endl;
+                            imwrite(result, canvas);        
+
+                            onContinue = false;
                             exit(EXIT_SUCCESS);
                         }
-                        onContinue = false;
+                        
                     }
                 }
-        
+            
             }while(onContinue_local);
         }
     }
 
 
+    t_apres = omp_get_wtime();
     double t_total = omp_get_wtime();
 
 
@@ -135,6 +140,7 @@ int main(int argc, char *argv[])
 
 
     // Dessine et sauvegarde
+    result = "output" + to_string(0) + ".png";  
     grid.draw(canvas);
     imwrite(result, canvas);
 
