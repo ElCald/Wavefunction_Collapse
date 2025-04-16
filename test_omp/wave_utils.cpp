@@ -1,0 +1,306 @@
+#include "wave_utils.h"
+#include <omp.h>
+
+using namespace std;
+using namespace cv;
+
+void Tile::setRules(const vector<Tile *> &allTiles)
+{
+    for (auto &tile : allTiles)
+    {
+        if (edges[0] == tile->edges[2])
+            up.push_back(tile);
+        if (edges[1] == tile->edges[3])
+            right.push_back(tile);
+        if (edges[2] == tile->edges[0])
+            down.push_back(tile);
+        if (edges[3] == tile->edges[1])
+            left.push_back(tile);
+    }
+}
+
+void Tile::draw(Mat &canvas, int x, int y, int size) const
+{
+    Mat resized;
+    resize(image, resized, Size(size, size));
+    resized.copyTo(canvas(Rect(x, y, size, size)));
+}
+
+int Cell::entropy() const
+{
+    return static_cast<int>(options.size());
+}
+
+void Cell::draw(Mat &canvas, int tileSize) const
+{
+    if (collapsed && !options.empty())
+    {
+        options[0]->draw(canvas, x * tileSize, y * tileSize, tileSize);
+    }
+}
+
+void Cell::observe(mt19937 &rng)
+{
+    if (!collapsed && !options.empty())
+    {
+        uniform_int_distribution<int> dist(0, static_cast<int>(options.size() - 1));
+        options = {options[dist(rng)]};
+        collapsed = true;
+    }
+}
+
+void Cell::update()
+{
+    collapsed = (options.size() == 1);
+}
+
+void Grid::draw(Mat &canvas)
+{
+    for (auto &row : cells)
+    {
+        for (auto &cell : row)
+        {
+            cell.draw(canvas, tileSize);
+        }
+    }
+}
+
+// Randomise toutes les cellules pour test visuel (non-collapse)
+void Grid::randomizeAll(mt19937 &rng)
+{
+    for (auto &row : cells)
+    {
+        for (auto &cell : row)
+        {
+            uniform_int_distribution<int> dist(0, static_cast<int>(cell.options.size() - 1));
+            int choice = dist(rng);
+            cell.options = {cell.options[choice]};
+            cell.collapsed = true;
+        }
+    }
+}
+
+Cell *Grid::heuristicPick()
+{
+    vector<Cell *> uncollapsed;
+
+    for (auto &row : cells)
+    {
+        for (auto &cell : row)
+        {
+            if (!cell.collapsed && !cell.options.empty())
+                uncollapsed.push_back(&cell);
+        }
+    }
+
+    if (uncollapsed.empty())
+        return nullptr;
+
+    sort(uncollapsed.begin(), uncollapsed.end(), [](const Cell *a, const Cell *b){
+        return a->entropy() < b->entropy();
+    });
+
+    int minEntropy = uncollapsed.front()->entropy();
+    vector<Cell *> lowestEntropy;
+    copy_if(uncollapsed.begin(), uncollapsed.end(), back_inserter(lowestEntropy), [minEntropy](Cell *c){ 
+        return c->entropy() == minEntropy; 
+    });
+
+    random_device rd;
+    mt19937 rng(rd());
+    uniform_int_distribution<int> dist(0, static_cast<int>(lowestEntropy.size() - 1));
+    return lowestEntropy[dist(rng)];
+}
+
+Cell *Grid::getCell(int x, int y)
+{
+    if (x < 0 || y < 0 || x >= cols || y >= rows)
+        return nullptr;
+    return &cells[y][x];
+}
+
+void Grid::collapse(std::mt19937 &gen)
+{
+    // 1. Trouver les cellules non encore collapsées
+    vector<Cell *> nonCollapsed;
+    for(int i=0; i<rows; i++){
+        for(int j=0; j<cols; j++){
+            if (!cells.at(i).at(j).collapsed)
+            {
+                nonCollapsed.push_back(&cells.at(i).at(j));
+            }
+        }
+    }
+        
+
+
+    // 2. Si toutes les cellules sont collapsées, on a fini
+    if (nonCollapsed.empty())
+        return;
+
+
+    // 3. Trouver celles avec l'entropie minimale
+    size_t minEntropy = SIZE_MAX;
+
+    for(size_t i=0; i<nonCollapsed.size(); i++){
+        if (nonCollapsed.at(i)->options.size() < minEntropy)
+        {
+            minEntropy = nonCollapsed.at(i)->options.size();
+        }
+    }
+ 
+
+
+    // 4. En sélectionner la 1ere parmi celles avec entropie minimale
+    vector<Cell *> candidates;
+
+    for(size_t i=0; i<nonCollapsed.size(); i++){
+        if (nonCollapsed.at(i)->options.size() == minEntropy)
+        {
+            candidates.push_back(nonCollapsed.at(i));
+        }
+    }
+
+
+
+
+    std::uniform_int_distribution<> dist(0, candidates.size() - 1);
+    Cell *chosen = candidates[dist(gen)];
+    // Cell *chosen = candidates[0];
+
+    // 5. Appliquer la contrainte des voisins
+    int x = chosen->x;
+    int y = chosen->y;
+
+    vector<Tile *> cumulative = chosen->options;
+
+    Cell *top = getCell(x, y - 1);
+    Cell *right = getCell(x + 1, y);
+    Cell *bottom = getCell(x, y + 1);
+    Cell *left = getCell(x - 1, y);
+
+
+    vector<pair<Cell *, const vector<Tile *> Tile::*>> neighbors = {
+        {top, &Tile::down},
+        {right, &Tile::left},
+        {bottom, &Tile::up},
+        {left, &Tile::right}
+    };
+
+
+    for (const auto &[neighbor, direction] : neighbors)
+    {
+        if (neighbor == nullptr || neighbor->options.empty())
+            continue;
+
+        vector<Tile *> validFromNeighbor;
+        for (Tile *neighborTile : neighbor->options)
+        {
+            const vector<Tile *> &compatible = neighborTile->*direction;
+            validFromNeighbor.insert(validFromNeighbor.end(), compatible.begin(), compatible.end());
+        }
+
+        vector<Tile *> filtered;
+        for (Tile *tile : cumulative)
+        {
+            if (std::find(validFromNeighbor.begin(), validFromNeighbor.end(), tile) != validFromNeighbor.end())
+            {
+                filtered.push_back(tile);
+            }
+        }
+
+        cumulative = filtered;
+    }
+
+    // 6. Collapse : choisir un tile parmi les options valides
+    if (!cumulative.empty())
+    {
+        std::uniform_int_distribution<> tileDist(0, cumulative.size() - 1);
+        Tile *selected = cumulative[tileDist(gen)];
+        // Tile *selected = cumulative[1];
+        chosen->collapsed = true;
+        chosen->options = {selected};
+    }
+}
+
+
+bool Grid::is_ready(){
+
+    for(size_t i=0; i<cells.size(); i++){
+        for(size_t j=0; j<cells.at(i).size(); j++){
+            if(!cells.at(i).at(j).collapsed){
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+
+Mat loadAndResizeImage(const string &path, int size)
+{
+    Mat img = imread(path, IMREAD_UNCHANGED);
+    if (img.empty())
+    {
+        cerr << "Erreur de chargement : " << path << endl;
+        exit(EXIT_FAILURE);
+    }
+    resize(img, img, Size(size, size));
+    return img;
+}
+
+vector<Tile *> loadTiles(const vector<string> &assetPaths, const vector<vector<int>> &edgeData, int tileSize)
+{
+    vector<Tile *> tiles;
+    for (size_t i = 0; i < assetPaths.size(); ++i)
+    {
+        Mat img = loadAndResizeImage(assetPaths[i], tileSize);
+        tiles.push_back(new Tile(img, static_cast<int>(i), edgeData[i]));
+    }
+
+    // Définir les règles de compatibilité pour chaque tuile
+    for (auto &tile : tiles)
+    {
+        tile->setRules(tiles);
+    }
+
+    return tiles;
+}
+
+
+/**
+ * @param n Nombre de tuiles
+ * @param d Profondeur
+ * 
+ * @return Tableau de tâches
+ */
+int* generateTasks(int n, int d) {
+    int rows = pow(n, d);
+    int* data = new int[rows * d];
+
+    for (int i = 0; i < rows; ++i) {
+        int value = i;
+        for (int j = d - 1; j >= 0; --j) {
+            data[i * d + j] = value % n;
+            value /= n;
+        }
+    }
+
+    return data;
+}
+
+
+std::pair<int, int> damier_coords(int k, int cols) {
+    int half_cols = cols / 2;
+    int row = k / half_cols;
+    int col_in_row = k % half_cols;
+    int col;
+
+    if (row % 2 == 0) {
+        col = col_in_row * 2;       // colonnes paires pour lignes paires
+    } else {
+        col = col_in_row * 2 + 1;   // colonnes impaires pour lignes impaires
+    }
+
+    return {row, col};
+}

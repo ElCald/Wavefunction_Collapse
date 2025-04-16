@@ -1,0 +1,20 @@
+2 à terminé avec la tache : 3
+Image sauvegardée dans output.png en : 30.7376sec.
+0 à terminé avec la tache : 2
+Image sauvegardée dans output.png en : 5.4546sec.
+3 à terminé avec la tache : 0
+Image sauvegardée dans output.png en : 24.6204sec.
+1 à terminé avec la tache : 3
+Image sauvegardée dans output.png en : 24.6756sec.
+3 à terminé avec la tache : 3
+Image sauvegardée dans output.png en : 4.01147sec.
+0 à terminé avec la tache : 0
+Image sauvegardée dans output.png en : 6.00813sec.
+1 à terminé avec la tache : 2
+Image sauvegardée dans output.png en : 36.1685sec.
+3 à terminé avec la tache : 3
+Image sauvegardée dans output.png en : 23.602sec.
+1 à terminé avec la tache : 0
+Image sauvegardée dans output.png en : 61.9334sec.
+0 à terminé avec la tache : 3
+Image sauvegardée dans output.png en : 10.5945sec.
