@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#SBATCH --account="r250004"
+#SBATCH --time=01:30:00
+#SBATCH --mem=16G
+#SBATCH --constraint=x64cpu
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=128
+#SBATCH --job-name "omp 128"
+#SBATCH --error=err/job.%J.err
+#SBATCH --output=out/job.%J.out
+
+romeo_load_x64cpu_env
+
+bash exec_omp.sh

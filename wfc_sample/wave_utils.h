@@ -90,3 +90,4 @@ void print_tile(const vector<vector<int>> tile, int tile_size);
 int find_bord_in_list(vector<vector<int>>& bords, vector<int>& e);
 void generate_edges(vector<vector<vector<int>>>& liste_tuiles, vector<vector<int>>& edges, int tile_size);
 void print_edges(vector<vector<int>>& edges);
+

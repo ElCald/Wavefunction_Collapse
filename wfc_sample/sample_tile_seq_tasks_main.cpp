@@ -1,9 +1,8 @@
 /**
- * Version séquentielle
+ * Version séquentielle avec tâches
  * WFC avec génération de tuiles à partir d'une grille sample 
+ * On commence avec une grille pré-initialisée
  */
-
-
 
 #include "wave_utils.h"
 #include <fstream>
@@ -46,16 +45,26 @@ int main(int argc, char *argv[])
 
     int canvasWidth = 21;
     int canvasHeight = 21;
-    // Mat canvas(canvasHeight, canvasWidth, CV_8UC3, Scalar(0, 0, 0));
+
     Image_int canvas(canvasHeight, vector<int>(canvasWidth));
 
     // Initialise la grille
     Grid grid(canvasWidth, canvasHeight, tileSize, tiles);
 
-    // Juste pour test visuel : randomize chaque cellule
-    random_device rd;
-    mt19937 rng(rd());
+    
+    
+    int n = liste_tuiles.size(), d = 5;
+    // int rows = pow(n, d);
+    int* data = generateTasks(n, d);
 
+
+    
+    random_device grd;
+    mt19937 g(grd());
+
+    // On randomise le tableau de tâche pour pouvoir faire des tâches différentes à chaque exécution
+    std::shuffle(data, data+(n * d), g);
+   
 
     
     double t_avant = omp_get_wtime(), t_apres;
@@ -64,47 +73,63 @@ int main(int argc, char *argv[])
     string result;
 
 
+    // Juste pour test visuel : randomize chaque cellule
+    random_device rd;
+    mt19937 rng(rd());
+
+    Grid grid2(canvasWidth, canvasHeight, tileSize, tiles); // grid préchargée
+
+
+    for (int k = 0; k < d; ++k) {
+
+        auto [row, col] = damier_coords(k, grid2.cols);
+
+        grid2.cells.at(row).at(col).options.clear();
+        grid2.cells.at(row).at(col).options.push_back(tiles.at(data[0]));
+        grid2.cells.at(row).at(col).collapsed = true;
+
+    }
+
+
     do{
-        
         // init grid
-        Grid grid2(canvasWidth, canvasHeight, tileSize, tiles); // grid préchargée
+        Grid grid3(canvasWidth, canvasHeight, tileSize, tiles); // grid préchargée
+
+        grid3 = grid2;
 
 
         // Algorithme WFC principal
-        for (int k = 0; k < grid2.cols * grid2.rows; ++k)
+        for (int k = 0; k < grid3.cols * grid3.rows; ++k)
         {
-            grid2.collapse(rng);
+            grid3.collapse(rng);
         }
 
-        if(grid2.is_ready()){
-
+        if(grid3.is_ready()){
+            
             if(onContinue){
-                grid = grid2;
+                grid = grid3;
 
+    
                 onContinue = false;
+
+                t_apres = omp_get_wtime();
+                cout << "Image sauvegardée dans output.png en : " << t_apres - t_avant << "sec, from: 0" << endl;
+
+                exit(EXIT_SUCCESS);
             }
+        
             
         }
         
+        // cout << i++ << endl;
     }while(onContinue);
 
 
-    t_apres = omp_get_wtime();
-    // double t_total = omp_get_wtime();
+    
+    double t_total = omp_get_wtime();
 
-    // // Affichage du numéro des tuiles dans la grille
-    // for(int i=0; i<grid.rows; i++){
-    //     for(int j=0; j<grid.cols; j++){
-    //         if(grid.getCell(j,i)->collapsed){
-    //             cout << grid.getCell(j,i)->options.at(0)->index << " ";
-    //         }
-    //         else{
-    //             cout << "A "; 
-    //         }
-    //     }
-    //     cout << endl;
-    // }
-
+    
+    delete[] data;
 
 
     // Dessine et sauvegarde
@@ -113,7 +138,7 @@ int main(int argc, char *argv[])
     // imwrite(result, canvas);
 
     cout << "Image sauvegardée dans output.png en : " << t_apres - t_avant << "sec." << endl;
-    // cout << "Temps total : " << t_total - t_avant << "sec." << endl;
+    cout << "Temps total : " << t_total - t_avant << "sec." << endl;
 
     return 0;
 }

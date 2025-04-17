@@ -3,7 +3,7 @@
 # Author makefile : Cyril Rabat
 #
 
-EXEC = sample_tile_main sample_tile_omp_main
+EXEC = sample_tile_main sample_tile_omp_main sample_tile_omp_init_main  sample_tile_omp_tasks_main sample_tile_seq_tasks_main
 OBJECTS = wave_utils.o
 PROJECT_NAME = WaveCollapse
 
