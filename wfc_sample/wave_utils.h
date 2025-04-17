@@ -1,11 +1,11 @@
-#include <opencv2/opencv.hpp>
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <iostream>
 #include <random>
 
 using namespace std;
-using namespace cv;
+
 
 using Image_int = vector<vector<int>>;
 

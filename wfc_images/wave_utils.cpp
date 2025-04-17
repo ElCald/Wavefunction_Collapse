@@ -254,3 +254,42 @@ vector<Tile *> loadTiles(const vector<string> &assetPaths, const vector<vector<i
 
     return tiles;
 }
+
+
+std::pair<int, int> damier_coords(int k, int cols) {
+    int half_cols = cols / 2;
+    int row = k / half_cols;
+    int col_in_row = k % half_cols;
+    int col;
+
+    if (row % 2 == 0) {
+        col = col_in_row * 2;       // colonnes paires pour lignes paires
+    } else {
+        col = col_in_row * 2 + 1;   // colonnes impaires pour lignes impaires
+    }
+
+    return {row, col};
+}
+
+
+
+/**
+ * @param n Nombre de tuiles
+ * @param d Profondeur
+ * 
+ * @return Tableau de tâches
+ */
+int* generateTasks(int n, int d) {
+    int rows = pow(n, d);
+    int* data = new int[rows * d];
+
+    for (int i = 0; i < rows; ++i) {
+        int value = i;
+        for (int j = d - 1; j >= 0; --j) {
+            data[i * d + j] = value % n;
+            value /= n;
+        }
+    }
+
+    return data;
+}

@@ -1,5 +1,5 @@
 /**
- * Version parallélisée sans tâches
+ * Version parallélisé avec tâches
  * WFC avec tuiles préchargées sous forme d'images
  */
 
@@ -7,6 +7,8 @@
 #include "wave_utils.h"
 #include <fstream>
 #include <omp.h>
+#include <random>
+#include <algorithm>
 
 using namespace std;
 
@@ -61,6 +63,18 @@ int main(int argc, char *argv[])
     
     double t_avant = omp_get_wtime(), t_apres;
 
+
+    int n = 5, d = 3;
+    int rows = pow(n, d);
+    int* data = generateTasks(rows, d);
+
+    random_device grd;
+    mt19937 g(grd());
+
+    std::shuffle(data, data+(n * d), g);
+
+
+
     bool onContinue = true;
     #pragma omp parallel
     {
@@ -68,22 +82,38 @@ int main(int argc, char *argv[])
         random_device rd;
         mt19937 rng(rd());
 
-        
+
+        Grid grid2(canvasWidth, canvasHeight, tileSize, tiles);
+
+        for (int k = 0; k < d; ++k) {
+
+            auto [row, col] = damier_coords(k, grid2.cols);
+    
+            grid2.cells.at(row).at(col).options.clear();
+            grid2.cells.at(row).at(col).options.push_back(tiles.at(data[omp_get_thread_num() * d + k]));
+            grid2.cells.at(row).at(col).collapsed = true;
+
+        }
+
+
         do{
-            Grid grid2(canvasWidth, canvasHeight, tileSize, tiles);
+            
+            Grid grid3(canvasWidth, canvasHeight, tileSize, tiles);
+    
+            grid3 = grid2;
 
             // Algorithme WFC principal
             for (int i = 0; i < grid.cols * grid.rows; ++i)
             {
-                grid2.collapse(rng);
+                grid3.collapse(rng);
             }
 
-            if(grid2.is_ready()){
+            if(grid3.is_ready()){
                 #pragma omp critical
                 {
                     if(onContinue){
                         onContinue = false;
-                        grid = grid2;
+                        grid = grid3;
 
                         // Dessine et sauvegarde
                         grid.draw(canvas);
@@ -98,7 +128,12 @@ int main(int argc, char *argv[])
             }
 
         }while(onContinue);
+        
+        
     }
+
+
+    delete[] data;
 
 
     return 0;

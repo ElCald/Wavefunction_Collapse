@@ -2,7 +2,7 @@
 #include <omp.h>
 
 using namespace std;
-using namespace cv;
+
 
 void Tile::setRules(const vector<Tile *> &allTiles)
 {
@@ -100,7 +100,7 @@ Cell *Grid::heuristicPick()
 
     int minEntropy = uncollapsed.front()->entropy();
     vector<Cell *> lowestEntropy;
-    copy_if(uncollapsed.begin(), uncollapsed.end(), back_inserter(lowestEntropy), [minEntropy](Cell *c){ 
+    std::copy_if(uncollapsed.begin(), uncollapsed.end(), back_inserter(lowestEntropy), [minEntropy](Cell *c){ 
         return c->entropy() == minEntropy; 
     });
 

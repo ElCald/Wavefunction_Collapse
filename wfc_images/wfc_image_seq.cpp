@@ -1,3 +1,8 @@
+/**
+ * Version séquentielle
+ * WFC avec tuiles préchargées sous forme d'images
+ */
+
 #include "wave_utils.h"
 #include <fstream>
 #include <omp.h>

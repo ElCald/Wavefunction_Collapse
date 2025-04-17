@@ -75,3 +75,6 @@ Mat loadAndResizeImage(const string &path, int size);
 
 // Crée une liste de tuiles à partir de fichiers image et de leurs règles d’arêtes
 vector<Tile *> loadTiles(const vector<string> &assetPaths, const vector<vector<int>> &edgeData, int tileSize);
+
+int* generateTasks(int n, int d);
+std::pair<int, int> damier_coords(int k, int cols);

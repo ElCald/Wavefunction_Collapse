@@ -3,7 +3,7 @@
 # Author makefile : Cyril Rabat
 #
 
-EXEC = wfc_image_seq wfc_image_omp
+EXEC = wfc_image_seq wfc_image_omp wfc_image_omp_tasks
 OBJECTS = wave_utils.o
 PROJECT_NAME = WaveCollapse
 

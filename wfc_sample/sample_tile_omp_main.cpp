@@ -43,9 +43,9 @@ int main(int argc, char *argv[])
 
     vector<Tile *> tiles = loadTiles(liste_tuiles.size(), liste_edges, tileSize);
 
-    int canvasWidth = 15;
-    int canvasHeight = 15;
-    // Mat canvas(canvasHeight, canvasWidth, CV_8UC3, Scalar(0, 0, 0));
+    int canvasWidth = 21;
+    int canvasHeight = 21;
+
     Image_int canvas(canvasHeight, vector<int>(canvasWidth));
 
     // Initialise la grille

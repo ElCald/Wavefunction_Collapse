@@ -29,7 +29,7 @@ CCFLAGS_STD =-Ofast -Wall -march=native -mtune=native
 CCFLAGS_DEBUG = -D _DEBUG_ -g -O0
 CCFLAGS = $(CCFLAGS_STD)
 CCFLAGOMP = -fopenmp
-CCLIBS = -lopencv_core -lopencv_imgcodecs -lopencv_highgui -lopencv_imgproc
+CCLIBS =
 
 #
 # RULES
