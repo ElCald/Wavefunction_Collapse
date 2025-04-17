@@ -1,3 +1,10 @@
+/**
+ * Version séquentielle
+ * WFC avec génération de tuiles à partir d'une grille sample 
+ */
+
+
+
 #include "wave_utils.h"
 #include <fstream>
 #include <omp.h>
@@ -6,48 +13,6 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-    // Préparer les assets et leurs arêtes
-    vector<string> paths = {
-        "templates/0.png",
-        "templates/1.png",
-        "templates/2.png",
-        "templates/3.png",
-        "templates/4.png",
-        // "templates/5.png",
-        // "templates/6.png",
-        // "templates/7.png",
-        // "templates/8.png",
-        // "templates/9.png",
-        // "templates/10.png",
-        "templates/11.png",
-        "templates/12.png",
-    };
-
-    // Chaque tuile a des arêtes représentées par 4 entiers : [top, right, bottom, left]
-    vector<vector<int>> edges = {
-        {0, 0, 0, 0}, // 0
-        {1, 1, 0, 1}, // 1
-        {1, 1, 1, 0}, // 2
-        {0, 1, 1, 1}, // 3
-        {1, 0, 1, 1}, // 4
-        // {1, 1, 0, 0}, // 5
-        // {0, 1, 1, 0}, // 6
-        // {0, 0, 1, 1}, // 7
-        // {1, 0, 0, 1}, // 8
-        // {1, 0, 1, 0}, // 9
-        // {0, 1, 0, 1}, // 10
-        {0, 2, 0, 1}, // 11
-        {0, 1, 0, 2}, // 12
-    };
-
-
-    vector<vector<int>> sample_grid2 = {
-        {0, 1, 0, 0, 0},
-        {2, 1, 1, 0, 0},
-        {0, 2, 0, 0, 0},
-        {1, 1, 2, 1, 1},
-        {0, 1, 0, 3, 0},
-    };
 
     vector<vector<int>> sample_grid = {
         {0, 1, 0, 0, 0},
@@ -56,6 +21,7 @@ int main(int argc, char *argv[])
         {1, 1, 1, 1, 1},
         {0, 1, 0, 0, 0},
     };
+
 
 
     int tileSize = 3;
@@ -67,10 +33,10 @@ int main(int argc, char *argv[])
     save_tiles_from_grid_sample(liste_tuiles, num_tile, sample_grid, tileSize);
     print_tiles_list(liste_tuiles, tileSize);
 
+
+    // Chaque tuile a des arêtes représentées par 4 entiers : [top, right, bottom, left]
     generate_edges(liste_tuiles, liste_edges, tileSize);
     print_edges(liste_edges);
-
-
 
 
 
@@ -91,9 +57,6 @@ int main(int argc, char *argv[])
     mt19937 rng(rd());
 
 
-
-
-
     
     double t_avant = omp_get_wtime(), t_apres;
 
@@ -106,10 +69,6 @@ int main(int argc, char *argv[])
         // init grid
         Grid grid2(canvasWidth, canvasHeight, tileSize, tiles); // grid préchargée
 
-        // lancer les calculs
-
-        // bool onContinue_local = true;
-
 
         // Algorithme WFC principal
         for (int k = 0; k < grid2.cols * grid2.rows; ++k)
@@ -118,29 +77,22 @@ int main(int argc, char *argv[])
         }
 
         if(grid2.is_ready()){
-            // onContinue_local = false;
 
-            #pragma omp critical
-            {
-                if(onContinue){
-                    grid = grid2;
-                    cout << omp_get_thread_num() << " à terminé" << endl;
-            
-                    // t_apres = omp_get_wtime();
+            if(onContinue){
+                grid = grid2;
 
-                    // cout << "Image trouvée en : " << t_apres - t_avant << "sec." << endl;             
-
-                    onContinue = false;
-                }
+                onContinue = false;
             }
+            
         }
         
-        // cout << i++ << endl;
     }while(onContinue);
+
 
     t_apres = omp_get_wtime();
     double t_total = omp_get_wtime();
 
+    // Affichage du numéro des tuiles dans la grille
     for(int i=0; i<grid.rows; i++){
         for(int j=0; j<grid.cols; j++){
             if(grid.getCell(j,i)->collapsed){
@@ -153,8 +105,6 @@ int main(int argc, char *argv[])
         cout << endl;
     }
 
-
-    // delete[] data;
 
 
     // Dessine et sauvegarde
